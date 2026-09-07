@@ -1,0 +1,27 @@
+# Secrets - never commit real credentials
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Local/production data volumes (see docker-compose.yml + README section 9 -
+# these may contain real patient data and must never go into git)
+data/*.db
+data/reports/*
+!data/reports/.gitkeep
+uploads/*
+!uploads/.gitkeep
+!uploads/profile_pictures/
+uploads/profile_pictures/*
+!uploads/profile_pictures/.gitkeep
+reports/*
+!reports/.gitkeep
+
+# OS/editor cruft
+.DS_Store
+.idea/
+.vscode/

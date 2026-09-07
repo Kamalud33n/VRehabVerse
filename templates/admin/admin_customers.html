@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customers — MedNova VR Rehab</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=8">
+    <link rel="stylesheet" href="/static/css/auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img class="logo-icon" src="/assets/logo.png?v=2" alt="MedNova logo" width="40" height="40">
+                    <div class="logo-text"><span class="logo-title">MedNova</span><span class="logo-subtitle">Super Admin</span></div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/admin/dashboard" class="nav-item"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+                <a href="/admin/registrations" class="nav-item"><i class="fas fa-user-check"></i><span>Registrations</span></a>
+                <a href="/admin/customers" class="nav-item active"><i class="fas fa-hospital-user"></i><span>Customers</span></a>
+                <a href="/admin/support" class="nav-item"><i class="fas fa-headset"></i><span>Support</span></a>
+                <a href="/admin/profile" class="nav-item"><i class="fas fa-user"></i><span>Profile</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+                    <div class="breadcrumb"><span>Admin</span><i class="fas fa-chevron-right"></i><span class="active">Customers</span></div>
+                    <div class="top-search"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Search therapists..."></div>
+                </div>
+                <div class="top-bar-right">
+                    <div class="topbar-avatar"><i class="fas fa-user-shield"></i></div>
+                    <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-area" style="display:flex;flex-direction:column;gap:20px;">
+                <h1 class="page-title">Customer Management</h1>
+
+                <div class="card" style="background:var(--surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="text-align:left;border-bottom:1px solid var(--border);">
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Name</th>
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Email</th>
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Hospital</th>
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Status</th>
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Active</th>
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Last login</th>
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="custTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Customer detail drawer -->
+    <div class="auth-modal-overlay" id="detailModal">
+        <div class="auth-modal-card" style="max-width:440px;text-align:left;" id="detailContent"></div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+        let searchDebounce;
+        document.getElementById('searchInput').addEventListener('input', () => {
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(loadCustomers, 300);
+        });
+
+        async function loadCustomers() {
+            try {
+                const search = document.getElementById('searchInput').value.trim();
+                const res = await fetch(`/api/admin/customers/therapists?page_size=100${search ? '&search=' + encodeURIComponent(search) : ''}`, { credentials: 'same-origin' });
+                if (res.status === 401 || res.status === 403) { window.location.href = '/login'; return; }
+                const data = await res.json();
+
+                document.getElementById('custTableBody').innerHTML = data.items.map(u => `
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <td style="padding:12px 16px;font-weight:600;cursor:pointer;color:var(--primary);" onclick="viewCustomer('${u.id}')">${escapeHtml(u.full_name)}</td>
+                        <td style="padding:12px 16px;">${escapeHtml(u.email)}</td>
+                        <td style="padding:12px 16px;">${u.hospital_name ? escapeHtml(u.hospital_name) : '—'}</td>
+                        <td style="padding:12px 16px;"><span class="auth-status-pill ${u.status}">${u.status}</span></td>
+                        <td style="padding:12px 16px;">${u.is_active ? '<span style="color:var(--success);">Active</span>' : '<span style="color:var(--danger);">Deactivated</span>'}</td>
+                        <td style="padding:12px 16px;" class="caption">${u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : 'Never'}</td>
+                        <td style="padding:12px 16px;">
+                            ${u.is_active
+                                ? `<button class="btn-icon" title="Deactivate" onclick="toggleActive('${u.id}', false)" style="color:var(--danger);"><i class="fas fa-user-slash"></i></button>`
+                                : `<button class="btn-icon" title="Reactivate" onclick="toggleActive('${u.id}', true)" style="color:var(--success);"><i class="fas fa-user-check"></i></button>`}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function viewCustomer(id) {
+            const res = await fetch(`/api/admin/customers/therapists/${id}`, { credentials: 'same-origin' });
+            const c = await res.json();
+            document.getElementById('detailContent').innerHTML = `
+                <h3 style="margin-bottom:14px;">${escapeHtml(c.full_name)}</h3>
+                <div class="caption" style="margin-bottom:4px;">Email: ${escapeHtml(c.email)}</div>
+                <div class="caption" style="margin-bottom:4px;">Phone: ${c.phone ? escapeHtml(c.phone) : '—'}</div>
+                <div class="caption" style="margin-bottom:4px;">Job title: ${c.job_title ? escapeHtml(c.job_title) : '—'}</div>
+                <div class="caption" style="margin-bottom:4px;">Hospital: ${c.hospital ? escapeHtml(c.hospital.name) : '—'}</div>
+                <div class="caption" style="margin-bottom:4px;">Patients: ${c.patient_count} · Sessions: ${c.session_count}</div>
+                <div class="caption" style="margin-bottom:14px;">Registered: ${new Date(c.created_at).toLocaleDateString()}</div>
+                <button class="auth-modal-btn auth-modal-btn-ghost" style="width:100%;" onclick="closeDetail()">Close</button>
+            `;
+            document.getElementById('detailModal').classList.add('open');
+        }
+        function closeDetail() { document.getElementById('detailModal').classList.remove('open'); }
+        document.getElementById('detailModal').addEventListener('click', (e) => {
+            if (e.target.id === 'detailModal') closeDetail();
+        });
+
+        async function toggleActive(id, activate) {
+            const endpoint = activate ? 'reactivate' : 'deactivate';
+            await fetch(`/api/admin/customers/therapists/${id}/${endpoint}`, { method: 'POST', credentials: 'same-origin' });
+            loadCustomers();
+        }
+
+        loadCustomers();
+    </script>
+</body>
+</html>

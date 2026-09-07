@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support — MedNova VR Rehab</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=8">
+    <link rel="stylesheet" href="/static/css/auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img class="logo-icon" src="/assets/logo.png?v=2" alt="MedNova logo" width="40" height="40">
+                    <div class="logo-text"><span class="logo-title">MedNova</span><span class="logo-subtitle">Super Admin</span></div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/admin/dashboard" class="nav-item"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+                <a href="/admin/registrations" class="nav-item"><i class="fas fa-user-check"></i><span>Registrations</span></a>
+                <a href="/admin/customers" class="nav-item"><i class="fas fa-hospital-user"></i><span>Customers</span></a>
+                <a href="/admin/support" class="nav-item active"><i class="fas fa-headset"></i><span>Support</span></a>
+                <a href="/admin/profile" class="nav-item"><i class="fas fa-user"></i><span>Profile</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+                    <div class="breadcrumb"><span>Admin</span><i class="fas fa-chevron-right"></i><span class="active">Support</span></div>
+                </div>
+                <div class="top-bar-right">
+                    <div class="topbar-avatar"><i class="fas fa-user-shield"></i></div>
+                    <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-area" style="display:flex;flex-direction:column;gap:20px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h1 class="page-title">Support Requests</h1>
+                    <div style="display:flex;gap:8px;">
+                        <button class="filter-btn active" onclick="setFilter(null, this)">All</button>
+                        <button class="filter-btn" onclick="setFilter('open', this)">Open</button>
+                        <button class="filter-btn" onclick="setFilter('in_progress', this)">In progress</button>
+                        <button class="filter-btn" onclick="setFilter('resolved', this)">Resolved</button>
+                    </div>
+                </div>
+
+                <div id="complaintsList" style="display:flex;flex-direction:column;gap:12px;"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+        let currentFilter = null;
+
+        function setFilter(status, btnEl) {
+            currentFilter = status;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btnEl.classList.add('active');
+            loadComplaints();
+        }
+
+        function statusColor(s) {
+            return { open: 'var(--danger)', in_progress: 'var(--warning)', resolved: 'var(--success)' }[s] || 'var(--text-muted)';
+        }
+
+        async function loadComplaints() {
+            const url = `/api/admin/complaints?page_size=100${currentFilter ? '&status=' + currentFilter : ''}`;
+            const res = await fetch(url, { credentials: 'same-origin' });
+            if (res.status === 401 || res.status === 403) { window.location.href = '/login'; return; }
+            const data = await res.json();
+            const list = document.getElementById('complaintsList');
+
+            if (!data.items.length) {
+                list.innerHTML = `<div class="card" style="padding:40px;text-align:center;color:var(--text-muted);background:var(--surface);border-radius:var(--radius-card);">No support requests found.</div>`;
+                return;
+            }
+
+            list.innerHTML = data.items.map(c => `
+                <div class="card" style="background:var(--surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:20px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
+                        <div>
+                            <div style="font-weight:700;">${escapeHtml(c.subject)}</div>
+                            <div class="caption">${escapeHtml(c.raised_by || 'Unknown')} (${escapeHtml(c.user_role)}) ${c.hospital_name ? '· ' + escapeHtml(c.hospital_name) : ''} · ${new Date(c.created_at).toLocaleString()}</div>
+                        </div>
+                        <span style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:${statusColor(c.status)};">${c.status.replace('_',' ')}</span>
+                    </div>
+                    <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:12px;">${escapeHtml(c.message)}</p>
+                    ${c.admin_response ? `<div style="background:var(--primary-tint);padding:10px 14px;border-radius:var(--radius-md);font-size:0.85rem;margin-bottom:12px;"><strong>Admin response:</strong> ${escapeHtml(c.admin_response)}</div>` : ''}
+                    ${c.status !== 'resolved' ? `
+                        <div style="display:flex;gap:8px;">
+                            <input class="form-input" id="resp-${c.id}" placeholder="Write a response..." style="flex:1;">
+                            <button class="btn-secondary" onclick="respond('${c.id}', 'in_progress')">Mark In Progress</button>
+                            <button class="btn-primary" onclick="respond('${c.id}', 'resolved')">Resolve</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        async function respond(id, status) {
+            const input = document.getElementById(`resp-${id}`);
+            const response = input ? input.value.trim() : '';
+            if (!response) { alert('Write a response first.'); return; }
+            await fetch(`/api/admin/complaints/${id}/respond`, {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ response, status }),
+            });
+            loadComplaints();
+        }
+
+        loadComplaints();
+    </script>
+</body>
+</html>

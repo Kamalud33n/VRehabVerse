@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedNova VR Rehab — VR-Powered Pediatric Rehabilitation</title>
+    <meta name="description" content="MedNova connects a Meta Quest headset to a live clinical dashboard for pediatric physiotherapy — reps, range of motion, and accuracy streamed in real time, with signed PDF reports generated automatically.">
+    <link rel="stylesheet" href="/static/css/landing.css?v=1">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="lp">
+
+    <nav class="lp-nav">
+        <div class="lp-nav-logo">
+            <img src="/assets/logo.png?v=2" alt="MedNova logo">
+            <span>MedNova VR Rehab</span>
+        </div>
+        <div class="lp-nav-actions">
+            <a class="ghost" href="/login">Login</a>
+            <a class="primary" href="/register">Register your hospital</a>
+        </div>
+    </nav>
+
+    <header class="lp-hero">
+        <div class="lp-hero-copy">
+            <div class="eyebrow">Meta Quest headset · Live clinical dashboard</div>
+            <h1>Physiotherapy kids<br>actually <em>show up</em> for.</h1>
+            <p>
+                MedNova turns pediatric rehab exercises into a guided VR game kids
+                actually want to play. Every rep, joint angle, and hit streams
+                straight to the therapist's dashboard in real time — not typed
+                up after the session ends.
+            </p>
+            <div class="lp-hero-stats">
+                <div><b>10s</b><span>Dashboard refresh during a live session</span></div>
+                <div><b>15min</b><span>Session code lifetime — one code per patient</span></div>
+                <div><b>4</b><span>Auto-generated clinical report types</span></div>
+            </div>
+        </div>
+        <div class="lp-hero-visual">
+            <div class="frame">
+                <img src="/assets/01_VR_Therapy_Session.png" alt="A child wearing a Meta Quest headset playing a MedNova rehab game while a parent watches, guided reach-and-grab exercise on screen">
+            </div>
+            <div class="lp-float-card">
+                <div class="ring"><span>94%</span></div>
+                <div>
+                    <div class="label">Live session</div>
+                    <div class="metrics">
+                        <div>28<small>Reps</small></div>
+                        <div>92%<small>ROM</small></div>
+                        <div>0.78s<small>Reaction</small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section class="lp-story">
+        <div class="lp-story-head">
+            <div class="eyebrow">How a session runs</div>
+            <h2>From headset to clinical report, without a therapist touching a spreadsheet.</h2>
+        </div>
+
+        <div class="lp-step">
+            <div class="lp-step-copy">
+                <span class="num">01 — Start</span>
+                <h3>One short code links the headset to the patient</h3>
+                <p>
+                    The therapist generates a session code before the child puts the
+                    headset on. It expires in 15 minutes, so it can never be reused
+                    later or accidentally linked to the wrong patient.
+                </p>
+            </div>
+            <div class="lp-step-visual">
+                <img src="/assets/01_VR_Therapy_Session.png" alt="Reach and grab VR exercise running on a TV screen, controller trails visible">
+            </div>
+        </div>
+
+        <div class="lp-step rev">
+            <div class="lp-step-copy">
+                <span class="num">02 — Supervise</span>
+                <h3>Watch reps, range of motion, and accuracy as they happen</h3>
+                <p>
+                    The headset streams live metrics and camera POV frames over
+                    WebSocket as the child plays. The therapist follows the
+                    skeleton tracking and real numbers on their tablet — not a
+                    summary written after the session ends.
+                </p>
+            </div>
+            <div class="lp-step-visual">
+                <img src="/assets/03_Therapy_Session.png" alt="Therapist watching a live skeleton tracking overlay and rep count on screen next to the patient">
+            </div>
+        </div>
+
+        <div class="lp-step">
+            <div class="lp-step-copy">
+                <span class="num">03 — Track</span>
+                <h3>Every session adds to the patient's progress chart</h3>
+                <p>
+                    ROM progression, accuracy, left-vs-right hand usage, and reaction
+                    time trend across every session automatically — so a therapist
+                    can see whether this week's plan is actually working before the
+                    next visit.
+                </p>
+            </div>
+            <div class="lp-step-visual">
+                <img src="/assets/02_Progress_Dashboard.png" alt="Progress dashboard with ROM progression chart, accuracy ring, and hand usage bars">
+            </div>
+        </div>
+
+        <div class="lp-step rev">
+            <div class="lp-step-copy">
+                <span class="num">04 — Report</span>
+                <h3>A signed clinical PDF, ready before the parents leave the room</h3>
+                <p>
+                    Session, weekly, monthly, and comparative reports generate
+                    automatically with KPI cards and progress charts. The
+                    supervising specialist's name is pulled straight from the
+                    login — no retyping.
+                </p>
+            </div>
+            <div class="lp-step-visual">
+                <img src="/assets/04_Session_Report_crop.png" alt="Signed session report shown on a tablet with total time, repetitions, accuracy, and performance charts">
+            </div>
+        </div>
+    </section>
+
+    <section class="lp-also">
+        <div class="lp-also-head">
+            <h2>Everything else a hospital rollout needs</h2>
+            <p>The parts that don't show up in a demo, but matter once real patients are on it.</p>
+        </div>
+        <div class="lp-also-grid">
+            <div class="lp-also-item">
+                <i class="fas fa-hospital"></i>
+                <h4>Hospital onboarding</h4>
+                <p>A hospital registers once; our team reviews and approves it before any therapist account can go live.</p>
+            </div>
+            <div class="lp-also-item">
+                <i class="fas fa-shield-halved"></i>
+                <h4>Role-based access</h4>
+                <p>Therapists see only their own patients. Admins get platform oversight, not access to clinical data.</p>
+            </div>
+            <div class="lp-also-item">
+                <i class="fas fa-file-export"></i>
+                <h4>Data export</h4>
+                <p>Export session and patient data any time a hospital needs it in another system.</p>
+            </div>
+            <div class="lp-also-item">
+                <i class="fas fa-headset"></i>
+                <h4>Camera POV streaming</h4>
+                <p>See exactly what the child sees inside the headset, relayed live to the dashboard.</p>
+            </div>
+            <div class="lp-also-item">
+                <i class="fas fa-life-ring"></i>
+                <h4>Support built in</h4>
+                <p>Therapists raise and track support tickets without ever leaving the dashboard.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="lp-cta">
+        <div class="lp-cta-inner">
+            <img src="/assets/05_Therapy.png" alt="Doctor reviewing the MedNova progress dashboard at a desk overlooking the mountains of Muscat">
+            <div class="lp-cta-content">
+                <div class="eyebrow">Muscat, Oman — and anywhere else</div>
+                <h2>Bring VR rehab to your clinic.</h2>
+                <p>Registration takes a few minutes. Our team reviews every new hospital and therapist account before anyone can log in — use the Register link above to get started.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="lp-footer">
+        <div>&copy; <span id="year"></span> MedNova VR Rehabilitation Platform. Built for pediatric physiotherapy.</div>
+        <span class="loc">MUSCAT, OMAN</span>
+    </footer>
+
+    <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>

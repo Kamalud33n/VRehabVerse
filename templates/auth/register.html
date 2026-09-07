@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register — MedNova VR Rehab</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=8">
+    <link rel="stylesheet" href="/static/css/landing.css?v=1">
+    <link rel="stylesheet" href="/static/css/auth-pages.css?v=2">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-shell" style="align-items:flex-start;">
+        <div class="auth-shell-brand" style="min-height:100vh;">
+            <div class="auth-brand-logo">
+                <img src="/assets/logo.png?v=2" alt="logo">
+                <span>MedNova VR Rehab</span>
+            </div>
+            <h1 class="auth-brand-headline">Bring VR rehabilitation to your hospital</h1>
+            <p class="auth-brand-sub">Register as a therapist/specialist. Our team reviews and approves every new account before access is granted.</p>
+            <div class="auth-brand-features">
+                <div class="auth-brand-feature"><i class="fas fa-user-check"></i> Reviewed & approved by Super Admin</div>
+                <div class="auth-brand-feature"><i class="fas fa-hospital"></i> Linked to your hospital's profile</div>
+                <div class="auth-brand-feature"><i class="fas fa-lock"></i> Role-based, secure access</div>
+            </div>
+        </div>
+
+        <div class="auth-shell-form" style="padding-top:40px;padding-bottom:40px;">
+            <div class="auth-card wide">
+                <div class="auth-card-header">
+                    <h1>Create your account</h1>
+                    <p>Fields marked * are required. You'll be notified once a Super Admin approves your registration.</p>
+                </div>
+
+                <div class="auth-alert error" id="regError"></div>
+                <div class="auth-alert success" id="regSuccess"></div>
+
+                <form id="registerForm">
+                    <div class="section-title" style="margin-bottom:12px;">Personal information</div>
+                    <div class="form-group">
+                        <label>Full name *</label>
+                        <input class="form-input" id="fullName" required placeholder="Dr. Ahmed Al-Balushi">
+                    </div>
+                    <div class="auth-form-row">
+                        <div class="form-group">
+                            <label>Email *</label>
+                            <input class="form-input" type="email" id="email" required placeholder="you@hospital.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Role / job title</label>
+                            <input class="form-input" id="jobTitle" placeholder="Physiotherapist">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Phone number *</label>
+                        <div class="auth-phone-group">
+                            <select class="form-input" id="countryCode"></select>
+                            <input class="form-input" id="phoneNumber" required placeholder="9123 4567">
+                        </div>
+                    </div>
+
+                    <div class="auth-form-row">
+                        <div class="form-group">
+                            <label>Password *</label>
+                            <input class="form-input" type="password" id="password" required minlength="8" placeholder="Min. 8 characters">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm password *</label>
+                            <input class="form-input" type="password" id="confirmPassword" required minlength="8" placeholder="Re-enter password">
+                        </div>
+                    </div>
+
+                    <div class="section-title" style="margin:20px 0 12px;">Hospital information</div>
+                    <div class="form-group">
+                        <label>Hospital / organization name *</label>
+                        <input class="form-input" id="hospitalName" required placeholder="Start typing to search or add new..." autocomplete="off">
+                        <div id="hospitalSuggestions" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);margin-top:4px;max-height:160px;overflow-y:auto;"></div>
+                        <input type="hidden" id="hospitalId">
+                    </div>
+                    <div class="auth-form-row">
+                        <div class="form-group">
+                            <label>City</label>
+                            <input class="form-input" id="hospitalCity" placeholder="Muscat">
+                        </div>
+                        <div class="form-group">
+                            <label>Country</label>
+                            <input class="form-input" id="hospitalCountry" placeholder="Oman">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Hospital address</label>
+                        <input class="form-input" id="hospitalAddress" placeholder="Street, area">
+                    </div>
+
+                    <button type="submit" class="auth-submit-btn" id="registerBtn">Submit registration &amp; send verification code</button>
+                </form>
+
+                <form id="otpForm" style="display:none;">
+                    <div class="section-title" style="margin-bottom:12px;">Verify your email</div>
+                    <p style="font-size:0.85rem;color:var(--text-secondary,#5A6472);margin:0 0 16px;">
+                        We've sent a 6-digit code to <strong id="otpEmailLabel"></strong>. Enter it below to confirm this email is yours.
+                    </p>
+                    <div class="form-group">
+                        <label>Verification code *</label>
+                        <input class="form-input" id="otpInput" required maxlength="6" inputmode="numeric"
+                               autocomplete="one-time-code" placeholder="6-digit code"
+                               style="letter-spacing:6px;font-size:1.1rem;text-align:center;">
+                    </div>
+                    <button type="submit" class="auth-submit-btn" id="otpVerifyBtn">Verify &amp; complete registration</button>
+                    <button type="button" class="auth-submit-btn" id="otpResendBtn"
+                            style="background:transparent;color:var(--primary,#1B2A4A);border:1px solid var(--border);margin-top:10px;">
+                        Resend code
+                    </button>
+                </form>
+
+                <div class="auth-card-footer">
+                    Already have an account? <a href="/login">Sign in</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const countryCodes = [
+            { name: "Oman", code: "+968", flag: "🇴🇲" },
+            { name: "UAE", code: "+971", flag: "🇦🇪" },
+            { name: "Saudi Arabia", code: "+966", flag: "🇸🇦" },
+            { name: "Qatar", code: "+974", flag: "🇶🇦" },
+            { name: "Bahrain", code: "+973", flag: "🇧🇭" },
+            { name: "Kuwait", code: "+965", flag: "🇰🇼" },
+            { name: "Yemen", code: "+967", flag: "🇾🇪" },
+            { name: "Jordan", code: "+962", flag: "🇯🇴" },
+            { name: "Lebanon", code: "+961", flag: "🇱🇧" },
+            { name: "Syria", code: "+963", flag: "🇸🇾" },
+            { name: "Iraq", code: "+964", flag: "🇮🇶" },
+            { name: "Palestine", code: "+970", flag: "🇵🇸" },
+            { name: "Egypt", code: "+20", flag: "🇪🇬" },
+            { name: "Libya", code: "+218", flag: "🇱🇾" },
+            { name: "Tunisia", code: "+216", flag: "🇹🇳" },
+            { name: "Algeria", code: "+213", flag: "🇩🇿" },
+            { name: "Morocco", code: "+212", flag: "🇲🇦" },
+            { name: "Sudan", code: "+249", flag: "🇸🇩" },
+        ];
+
+        const ccSelect = document.getElementById('countryCode');
+        countryCodes.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.code;
+            opt.textContent = `${c.flag} ${c.code}`;
+            ccSelect.appendChild(opt);
+        });
+        ccSelect.value = "+968";
+
+        // Hospital autocomplete
+        const hospitalInput = document.getElementById('hospitalName');
+        const suggestBox = document.getElementById('hospitalSuggestions');
+        const hospitalIdInput = document.getElementById('hospitalId');
+        let debounceTimer;
+
+        hospitalInput.addEventListener('input', () => {
+            hospitalIdInput.value = ''; // typing invalidates a previous exact selection
+            clearTimeout(debounceTimer);
+            const q = hospitalInput.value.trim();
+            if (q.length < 2) { suggestBox.style.display = 'none'; return; }
+            debounceTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/auth/hospitals?search=${encodeURIComponent(q)}`);
+                    const hospitals = await res.json();
+                    if (!hospitals.length) { suggestBox.style.display = 'none'; return; }
+                    suggestBox.innerHTML = hospitals.map(h =>
+                        `<div class="hospital-suggestion" data-id="${h.id}" data-name="${h.name}" style="padding:10px 12px;cursor:pointer;font-size:0.85rem;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">${h.name}${h.city ? ' · ' + h.city : ''}</div>`
+                    ).join('');
+                    suggestBox.style.display = 'block';
+                    suggestBox.querySelectorAll('.hospital-suggestion').forEach(el => {
+                        el.addEventListener('click', () => {
+                            hospitalInput.value = el.dataset.name;
+                            hospitalIdInput.value = el.dataset.id;
+                            suggestBox.style.display = 'none';
+                        });
+                    });
+                } catch (e) { console.error(e); }
+            }, 250);
+        });
+        document.addEventListener('click', (e) => {
+            if (!suggestBox.contains(e.target) && e.target !== hospitalInput) suggestBox.style.display = 'none';
+        });
+
+        const form = document.getElementById('registerForm');
+        const errorBox = document.getElementById('regError');
+        const successBox = document.getElementById('regSuccess');
+        const btn = document.getElementById('registerBtn');
+
+        const otpForm = document.getElementById('otpForm');
+        const otpInput = document.getElementById('otpInput');
+        const otpEmailLabel = document.getElementById('otpEmailLabel');
+        const otpVerifyBtn = document.getElementById('otpVerifyBtn');
+        const otpResendBtn = document.getElementById('otpResendBtn');
+        let registeredEmail = null;
+
+        function showError(msg) {
+            successBox.style.display = 'none';
+            errorBox.textContent = msg;
+            errorBox.style.display = 'block';
+        }
+        function showSuccess(msg) {
+            errorBox.style.display = 'none';
+            successBox.textContent = msg;
+            successBox.style.display = 'block';
+        }
+
+        // Step 1 — submit the full form. This creates the (unverified,
+        // pending) account on the backend and emails a 6-digit code.
+        // Registration only counts as "done" once that code is verified.
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorBox.style.display = 'none';
+            successBox.style.display = 'none';
+
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            if (password !== confirmPassword) {
+                showError('Password and confirm password do not match');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Submitting...';
+
+            const payload = {
+                full_name: document.getElementById('fullName').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                job_title: document.getElementById('jobTitle').value.trim() || null,
+                country_code: ccSelect.value,
+                phone_number: document.getElementById('phoneNumber').value.trim(),
+                password, confirm_password: confirmPassword,
+                hospital_id: hospitalIdInput.value || null,
+                hospital_name: hospitalIdInput.value ? null : (document.getElementById('hospitalName').value.trim() || null),
+                hospital_city: document.getElementById('hospitalCity').value.trim() || null,
+                hospital_country: document.getElementById('hospitalCountry').value.trim() || null,
+                hospital_address: document.getElementById('hospitalAddress').value.trim() || null,
+            };
+
+            try {
+                const res = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || (data.detail?.[0]?.msg) || 'Registration failed');
+
+                registeredEmail = data.email || payload.email;
+                otpEmailLabel.textContent = registeredEmail;
+
+                form.style.display = 'none';
+                otpForm.style.display = 'block';
+                showSuccess(data.message || 'Enter the verification code we emailed you.');
+            } catch (err) {
+                showError(typeof err.message === 'string' ? err.message : 'Registration failed');
+                btn.disabled = false;
+                btn.textContent = 'Submit registration & send verification code';
+            }
+        });
+
+        // Step 2 — enter the code that arrived by email.
+        otpForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const otp = otpInput.value.trim();
+            if (!otp) return;
+
+            otpVerifyBtn.disabled = true;
+            otpVerifyBtn.textContent = 'Verifying...';
+
+            try {
+                const res = await fetch('/auth/verify-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: registeredEmail, otp }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Verification failed');
+
+                otpForm.style.display = 'none';
+                showSuccess('Email verified! Your registration has been submitted to a Super Admin for approval. You\'ll be able to log in once approved.');
+                setTimeout(() => { window.location.href = '/login'; }, 3000);
+            } catch (err) {
+                showError(typeof err.message === 'string' ? err.message : 'Verification failed');
+                otpVerifyBtn.disabled = false;
+                otpVerifyBtn.textContent = 'Verify & complete registration';
+            }
+        });
+
+        otpResendBtn.addEventListener('click', async () => {
+            if (!registeredEmail) return;
+            otpResendBtn.disabled = true;
+            otpResendBtn.textContent = 'Sending...';
+            try {
+                const res = await fetch('/auth/resend-verification-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: registeredEmail }),
+                });
+                const data = await res.json();
+                showSuccess(data.message || 'A new code has been sent.');
+            } catch (err) {
+                showError('Could not resend the code. Please try again.');
+            } finally {
+                otpResendBtn.disabled = false;
+                otpResendBtn.textContent = 'Resend code';
+            }
+        });
+    </script>
+</body>
+</html>

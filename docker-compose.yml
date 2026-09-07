@@ -1,0 +1,44 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-changeme}
+      MYSQL_DATABASE: mednova_vr_db
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # Loads every setting from .env (APP_ENV, JWT_SECRET_KEY, SMTP_*,
+    # ALLOWED_ORIGINS, APP_BASE_URL, etc.) into the container. Without this,
+    # only the variables listed under `environment:` below actually reach
+    # the app — everything else in .env was silently missing inside the
+    # container, and the app would refuse to start in production mode
+    # without a JWT_SECRET_KEY.
+    env_file:
+      - .env
+    environment:
+      # Overrides the DATABASE_URL from .env specifically for Docker: .env
+      # points at "localhost" (for running the app directly on a machine),
+      # but inside docker-compose's network the MySQL container is reachable
+      # at hostname "db", not "localhost".
+      DATABASE_URL: mysql+pymysql://root:${DB_ROOT_PASSWORD:-changeme}@db:3306/mednova_vr_db?charset=utf8mb4
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./reports:/app/reports
+      - ./data:/app/data
+
+volumes:
+  db_data:

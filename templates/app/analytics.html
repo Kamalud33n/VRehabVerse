@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - MedNova VR Rehab</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=8">
+    <link rel="stylesheet" href="/static/css/auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="/static/vendor/chart.umd.min.js"></script>
+    <script src="/static/js/chart-theme.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img class="logo-icon" src="/assets/logo.png?v=2" alt="MedNova logo" width="40" height="40">
+                    <div class="logo-text">
+                        <span class="logo-title">MedNova</span>
+                        <span class="logo-subtitle">VR Rehab Platform</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+                <a href="/patients"  class="nav-item"><i class="fas fa-users"></i><span>Patients</span></a>
+                <a href="/session"   class="nav-item"><i class="fas fa-vr-cardboard"></i><span>Sessions</span></a>
+                <a href="/reports"   class="nav-item"><i class="fas fa-file-alt"></i><span>Reports</span></a>
+                <a href="/analytics" class="nav-item active"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
+                <a href="/settings"   class="nav-item"><i class="fas fa-gear"></i><span>Settings</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="status-dot online"></span>
+                    <span>System Online</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content" style="min-width:0;">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+                    <div class="breadcrumb">
+                        <span>Home</span><i class="fas fa-chevron-right"></i>
+                        <span class="active">Analytics</span>
+                    </div>
+                    <div class="top-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="globalSearch" placeholder="Search patients, sessions...">
+                    </div>
+                </div>
+                <div class="top-bar-right">
+                    <div class="notif-wrap">
+                        <button class="icon-btn" id="notifBtn" title="Notifications"><i class="fas fa-bell"></i><span class="dot-badge" id="notifDot"></span></button>
+                        <div class="notif-panel" id="notifPanel">
+                            <div class="notif-panel-header">Recent Activity</div>
+                            <div class="notif-panel-body" id="notifList"><div class="notif-empty">Loading...</div></div>
+                        </div>
+                    </div>
+                    <div class="topbar-avatar"><i class="fas fa-user-doctor"></i></div>
+                    <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-area" style="display:flex;flex-direction:column;gap:20px;min-width:0;overflow-x:hidden;">
+
+                <div class="analytics-header">
+                    <div>
+                        <h1 class="page-title">Analytics</h1>
+                        <p class="header-subtitle">Every stat and chart below is scoped to one patient at a time</p>
+                    </div>
+                </div>
+
+                <!-- The one control for the whole page. Nothing below loads
+                     until a patient is picked here. -->
+                <div class="chart-container animate-slide-up" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h3 class="card-title" style="margin-bottom:2px;">Patient</h3>
+                        <span class="caption">Every stat and chart on this page reflects this patient only</span>
+                    </div>
+                    <select class="form-input" id="patientSelect" style="max-width:280px;" onchange="onPatientChange()">
+                        <option value="">Select patient...</option>
+                    </select>
+                </div>
+
+                <!-- Optional second filter: same patient, but scoped further
+                     to one game's own metrics (arm reach distance, movement
+                     speed, etc. - whatever that game reports). Disabled
+                     until a patient is picked; hidden entirely if the
+                     patient has no game-specific sessions to show. -->
+                <div class="chart-container animate-slide-up" id="gameProgressSection" style="display:none;flex-direction:column;gap:12px;min-width:0;overflow-x:hidden;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <div>
+                            <h3 class="card-title" style="margin-bottom:2px;">Game Progress</h3>
+                            <span class="caption">This patient's growth on one specific game's own metrics</span>
+                        </div>
+                        <select class="form-input" id="gameSelect" style="max-width:280px;" onchange="onGameChange()">
+                            <option value="">Select game...</option>
+                        </select>
+                    </div>
+                    <div id="gameProgressBody" style="display:none;flex-direction:column;gap:12px;min-width:0;">
+                        <div class="canvas-wrapper-lg" style="position:relative;width:100%;min-width:0;">
+                            <canvas id="gameProgressChart"></canvas>
+                        </div>
+                        <div class="table-container" style="box-shadow:none;border:1px solid var(--border);overflow-x:auto;overflow-y:auto;max-height:320px;">
+                            <table style="min-width:640px;">
+                                <thead><tr id="gameProgressTableHead" style="position:sticky;top:0;background:#FAFBFE;z-index:1;"></tr></thead>
+                                <tbody id="gameProgressTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="caption" id="gameProgressEmpty" style="padding:8px 4px;">Select a game above to see this patient's growth on it.</div>
+                </div>
+
+                <!-- Shown until a patient is selected -->
+                <div class="chart-container animate-slide-up" id="noPatientState" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:48px 20px;text-align:center;">
+                    <svg viewBox="0 0 100 88" fill="none" xmlns="http://www.w3.org/2000/svg" width="100" height="88">
+                        <path d="M14 70 L34 46 L50 58 L86 20" stroke="var(--border)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <circle cx="34" cy="46" r="5" fill="var(--primary-tint)" stroke="var(--primary)" stroke-width="2.5"/>
+                        <circle cx="50" cy="58" r="5" fill="var(--violet-tint)" stroke="var(--violet)" stroke-width="2.5"/>
+                        <circle cx="86" cy="20" r="5" fill="var(--secondary-tint)" stroke="var(--secondary)" stroke-width="2.5"/>
+                    </svg>
+                    <span class="empty-title">No patient selected</span>
+                    <span class="empty-sub">Select a patient above to see their analytics.</span>
+                </div>
+
+                <!-- Everything below is per-patient and hidden until one is picked -->
+                <div id="analyticsContent" style="display:none;flex-direction:column;gap:20px;">
+
+                <!-- Patient Growth — the core of this page. Per-session change,
+                     week-over-week, and a one-line monthly verdict. -->
+                <div class="chart-container animate-slide-up" id="patientProgressSection">
+                    <div class="chart-header">
+                        <h3 class="card-title">Patient Progress</h3>
+                        <button class="btn-secondary" id="monthlyReportBtn" onclick="generateMonthlyReport()" style="font-size:13px;">
+                            <i class="fas fa-file-arrow-down"></i> Generate Monthly Report
+                        </button>
+                    </div>
+                    <div class="canvas-wrapper-lg" style="position:relative;">
+                        <canvas id="patientProgressChart"></canvas>
+                    </div>
+
+                    <div id="programCompletionRow" style="display:flex;gap:24px;padding:4px 4px 16px;flex-wrap:wrap;"></div>
+
+                    <!-- Session-by-session: exactly how much each session improved on the last -->
+                    <div class="section-header" style="padding:8px 4px 4px;display:flex;align-items:center;justify-content:space-between;">
+                        <h3 class="card-title" style="font-size:15px;">Session-by-Session Change</h3>
+                        <select id="sessionDeltaLimit" class="form-select" style="width:auto;padding:6px 10px;font-size:13px;">
+                            <option value="5">Last 5 sessions</option>
+                            <option value="10" selected>Last 10 sessions</option>
+                            <option value="20">Last 20 sessions</option>
+                            <option value="all">All sessions</option>
+                        </select>
+                    </div>
+                    <div class="table-container" style="box-shadow:none;border:1px solid var(--border);">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Session Date</th>
+                                    <th>Accuracy</th>
+                                    <th>Δ vs previous session</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sessionDeltaBody">
+                                <tr><td colspan="3" class="text-center">Select a patient to see session-by-session change.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Weekly and monthly roll-ups of the same data -->
+                    <div class="charts-row" style="margin-top:16px;">
+                        <div class="chart-container" style="box-shadow:none;border:1px solid var(--border);">
+                            <div class="chart-header">
+                                <h3 class="card-title" style="font-size:15px;">Weekly Comparison</h3>
+                                <span class="caption" id="weeklyDeltaCaption"></span>
+                            </div>
+                            <div class="canvas-wrapper"><canvas id="weeklyChart"></canvas></div>
+                        </div>
+                        <div class="chart-container" style="box-shadow:none;border:1px solid var(--border);">
+                            <div class="chart-header"><h3 class="card-title" style="font-size:15px;">Monthly Improvement</h3></div>
+                            <div id="monthlyImprovementCard" style="display:flex;gap:16px;flex-wrap:wrap;padding:12px 4px;">
+                                <div class="caption"><i class="fas fa-circle-info"></i> Select a patient to see monthly improvement.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid" id="summaryStats"></div>
+
+                <div class="gauge-row">
+                    <div class="chart-container gauge-card animate-slide-up">
+                        <h3 class="card-title" style="align-self:flex-start;">Completion Rate</h3>
+                        <div class="gauge-canvas-wrap"><canvas id="completionGauge"></canvas></div>
+                        <span class="gauge-caption">This patient's sessions finished vs started</span>
+                    </div>
+                    <div class="chart-container gauge-card animate-slide-up">
+                        <h3 class="card-title" style="align-self:flex-start;">Avg Accuracy (30d)</h3>
+                        <div class="gauge-canvas-wrap"><canvas id="accuracyGauge"></canvas></div>
+                        <span class="gauge-caption">This patient's mean exercise accuracy this month</span>
+                    </div>
+                    <div class="chart-container gauge-card animate-slide-up">
+                        <h3 class="card-title" style="align-self:flex-start;">Hand Usage (30d)</h3>
+                        <div class="hand-usage-dual">
+                            <div class="hand-usage-item">
+                                <div class="gauge-canvas-wrap-sm"><canvas id="rightHandGauge"></canvas></div>
+                                <span class="hand-usage-tag right"><i class="fas fa-circle"></i>Right</span>
+                            </div>
+                            <div class="hand-usage-item">
+                                <div class="gauge-canvas-wrap-sm"><canvas id="leftHandGauge"></canvas></div>
+                                <span class="hand-usage-tag left"><i class="fas fa-circle"></i>Left</span>
+                            </div>
+                        </div>
+                        <span class="gauge-caption" id="handUsageCaption">This patient's right vs left hand activity</span>
+                    </div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-container animate-slide-up">
+                        <div class="chart-header"><h3 class="card-title">Daily Sessions (30d)</h3></div>
+                        <div class="canvas-wrapper"><canvas id="dailyChart"></canvas></div>
+                    </div>
+                    <div class="chart-container animate-slide-up">
+                        <div class="chart-header"><h3 class="card-title">Monthly Sessions (12mo)</h3></div>
+                        <div class="canvas-wrapper"><canvas id="monthlyChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-container animate-slide-up">
+                        <div class="chart-header"><h3 class="card-title">Accuracy Trend</h3></div>
+                        <div class="canvas-wrapper"><canvas id="accuracyChart"></canvas></div>
+                    </div>
+                    <div class="chart-container animate-slide-up">
+                        <div class="chart-header"><h3 class="card-title">Range of Motion</h3></div>
+                        <!-- Range of Motion isn't a generic value the VR pipeline
+                             reports for every session — it only exists as a
+                             per-game metric (see services/game_metrics.py),
+                             measured differently per game. Rather than show an
+                             always-empty generic trend chart here, point to the
+                             Game Progress section above, which already renders
+                             each game's own Range of Motion field correctly. -->
+                        <div class="caption" style="padding:24px 4px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
+                            <span><i class="fas fa-circle-info"></i> Range of Motion is reported per game, not generically.</span>
+                            <span>Pick this patient's game in the <strong>Game Progress</strong> section above to see it.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-container animate-slide-up">
+                        <div class="chart-header"><h3 class="card-title">Completion Rate Trend</h3></div>
+                        <div class="canvas-wrapper"><canvas id="completionChart"></canvas></div>
+                    </div>
+                    <div class="chart-container animate-slide-up">
+                        <div class="chart-header"><h3 class="card-title">Exercise Distribution</h3></div>
+                        <div class="canvas-wrapper"><canvas id="exerciseChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-container animate-slide-up">
+                        <div class="chart-header">
+                            <h3 class="card-title">Error Count Trend</h3>
+                            <span class="caption" id="errorTrendCaption"></span>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="errorChart"></canvas></div>
+                    </div>
+                    <div class="chart-container animate-slide-up">
+                        <div class="chart-header">
+                            <h3 class="card-title">Reaction Time Trend</h3>
+                            <span class="caption" id="reactionTrendCaption"></span>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="reactionChart"></canvas></div>
+                    </div>
+                </div>
+
+                </div><!-- /analyticsContent -->
+
+            </div>
+
+            <!-- Themed confirm dialog, same as session.html — replaces the
+                 raw browser confirm() so logout matches the rest of the
+                 app's look. Content/button style filled in at call time
+                 by showConfirmModal(). -->
+            <div class="modal" id="confirmModal" style="display:none;">
+                <div class="modal-content" style="max-width:420px;">
+                    <div class="modal-header">
+                        <h3 class="card-title" id="confirmModalTitle">
+                            <i class="fas fa-circle-question" id="confirmModalIcon" style="color:var(--primary);margin-right:8px;"></i>
+                            <span id="confirmModalTitleText">Confirm</span>
+                        </h3>
+                        <button class="modal-close" onclick="closeConfirmModal(false)"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div style="padding:20px;">
+                        <p class="header-subtitle" id="confirmModalMessage" style="margin:0;">Are you sure?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" onclick="closeConfirmModal(false)" id="confirmModalCancelBtn">Cancel</button>
+                        <button class="btn-primary" onclick="closeConfirmModal(true)" id="confirmModalConfirmBtn">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        document.getElementById('menuToggle')?.addEventListener('click', () =>
+            document.querySelector('.sidebar').classList.toggle('open'));
+
+        document.getElementById('sessionDeltaLimit')?.addEventListener('change', refreshSessionDeltaDisplay);
+
+        await loadPatientOptions();
+        await loadGameOptions();
+    });
+
+    // The single control for the whole page. Nothing renders until a
+    // patient is chosen; every load* function below takes patientId and
+    // scopes its request to that patient only (?patient_id=...).
+    // Tracks the currently selected patient so generateMonthlyReport() can
+    // use it directly without re-reading the dropdown.
+    let _currentPatientId = null;
+
+    async function onPatientChange() {
+        const patientId = document.getElementById('patientSelect').value;
+        _currentPatientId = patientId || null;
+        const content = document.getElementById('analyticsContent');
+        const noPatient = document.getElementById('noPatientState');
+
+        // Game Progress section follows the same patient, but keeps
+        // whatever game was already picked (if any) and just re-fetches
+        // for the new patient - only reset it when there's no patient at all.
+        const gameSection = document.getElementById('gameProgressSection');
+        if (!patientId) {
+            content.style.display = 'none';
+            noPatient.style.display = 'flex';
+            gameSection.style.display = 'none';
+            return;
+        }
+        noPatient.style.display = 'none';
+        content.style.display = 'flex';
+        gameSection.style.display = 'flex';
+
+        await Promise.all([
+            loadSummary(patientId),
+            loadDailySessions(patientId),
+            loadMonthlySessions(patientId),
+            loadAccuracyTrend(patientId),
+            loadCompletionTrend(patientId),
+            loadExerciseDistribution(patientId),
+            loadBilateralHandUsage(patientId),
+            loadErrorTrend(patientId),
+            loadReactionTimeTrend(patientId),
+            loadPatientProgress(patientId),
+        ]);
+
+        const gameType = document.getElementById('gameSelect').value;
+        if (gameType) await loadGameProgress(patientId, gameType);
+    }
+
+    // Populates the game dropdown from the same schema the live session
+    // view uses (services/game_metrics.py's registry) - so a new game
+    // registered there shows up here automatically, no template change.
+    // Uses each entry's display_name (the name shown on session.html's
+    // own game picker) rather than prettifying the internal game_type
+    // key — the key and the user-facing name are unrelated strings, so
+    // guessing a label from the key showed a name the therapist never
+    // actually picked.
+    async function loadGameOptions() {
+        const sel = document.getElementById('gameSelect');
+        try {
+            const schema = await (await fetch('/api/dashboard/game-metrics-schema')).json();
+            Object.entries(schema).forEach(([gameType, entry]) => {
+                const opt = document.createElement('option');
+                opt.value = gameType;
+                opt.textContent = entry.display_name ||
+                    gameType.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+                sel.appendChild(opt);
+            });
+        } catch (e) {
+            console.error(e);
+            showLoadError('Game list');
+        }
+    }
+
+    async function onGameChange() {
+        const gameType = document.getElementById('gameSelect').value;
+        const body = document.getElementById('gameProgressBody');
+        const empty = document.getElementById('gameProgressEmpty');
+        if (!_currentPatientId || !gameType) {
+            body.style.display = 'none';
+            empty.style.display = 'block';
+            return;
+        }
+        await loadGameProgress(_currentPatientId, gameType);
+    }
+
+    async function loadGameProgress(patientId, gameType) {
+        const body = document.getElementById('gameProgressBody');
+        const empty = document.getElementById('gameProgressEmpty');
+        const chartWrap = document.getElementById('gameProgressChart')?.parentElement;
+        try {
+            const data = await (await fetch(`/api/analytics/game-progress/${patientId}?game_type=${encodeURIComponent(gameType)}`)).json();
+            if (data.detail) { showLoadError(data.detail); return; }
+
+            if (!data.sessions.length) {
+                body.style.display = 'none';
+                empty.textContent = 'No completed sessions for this patient on this game yet.';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            body.style.display = 'flex';
+
+            const labels = data.sessions.map(s => new Date(s.date).toLocaleDateString());
+            const { Theme, buildGroupedBarChart } = window.MedNovaCharts;
+
+            // Only chart fields on the same 0-100 scale (format "percent").
+            // Charting every field together — meters, seconds, raw counts,
+            // percentages — on one shared axis made small-scale bars
+            // (e.g. a 1.8m reach) invisible next to large ones (e.g. a
+            // count of 40 completed tasks), and with only 5 palette colors
+            // for up to 10 fields, unrelated metrics ended up sharing a
+            // color in the legend. Every field — chartable or not — still
+            // shows in the table below with its own correct unit.
+            const chartableFields = data.fields.filter(f => f.format === "percent");
+            if (chartableFields.length) {
+                if (chartWrap) chartWrap.style.display = '';
+                const palette = [Theme.primary, Theme.warning, Theme.violet, Theme.teal, Theme.danger];
+                const datasets = chartableFields.map((f, i) => ({
+                    label: f.label,
+                    data: data.sessions.map(s => s.metrics?.[f.key] ?? 0),
+                    color: palette[i % palette.length],
+                }));
+                rebuild('gameProgressChart', () => buildGroupedBarChart('gameProgressChart', labels, datasets, { maxY: 100 }));
+            } else if (chartWrap) {
+                // Nothing on a comparable scale to chart (e.g. only
+                // meters/seconds/count fields) — hide the chart rather
+                // than render a misleading one, the table still has everything.
+                chartWrap.style.display = 'none';
+            }
+
+            // Same numbers as a table underneath, since a game can report
+            // more metrics than are readable crammed into one bar chart.
+            const head = document.getElementById('gameProgressTableHead');
+            head.innerHTML = '<th>Session Date</th>' + data.fields.map(f => `<th>${f.label}</th>`).join('');
+            document.getElementById('gameProgressTableBody').innerHTML = data.sessions.map(s => `<tr>
+                    <td>${new Date(s.date).toLocaleDateString()}</td>
+                    ${data.fields.map(f => `<td>${s.metrics?.[f.key] ?? '-'}${formatSuffix(f.format)}</td>`).join('')}
+                </tr>`).join('');
+        } catch (e) {
+            console.error(e);
+            showLoadError('Game Progress');
+        }
+    }
+
+    // Matches the "format" tag from services/game_metrics.py's registry to
+    // a short display suffix - purely cosmetic, table already shows the
+    // raw number.
+    function formatSuffix(fmt) {
+        return { percent: '%', meters: 'm', seconds: 's', mps: ' m/s' }[fmt] || '';
+    }
+
+    // Lightweight toast for background load failures. Sections stay on
+    // screen as-is (blank gauge/chart), but the doctor gets a visible
+    // heads-up instead of a silently empty card that looks like "no data".
+    function showLoadError(sectionLabel) {
+        let toast = document.getElementById('loadErrorToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'loadErrorToast';
+            toast.style.cssText = `
+                position:fixed; bottom:24px; right:24px; z-index:1000;
+                background:var(--danger, #ff453a); color:#fff; padding:12px 18px;
+                border-radius:10px; font-size:13px; font-weight:500;
+                box-shadow:0 4px 16px rgba(0,0,0,0.2); max-width:320px;
+                display:flex; flex-direction:column; gap:4px;
+            `;
+            document.body.appendChild(toast);
+        }
+        const line = document.createElement('div');
+        line.textContent = `Failed to load: ${sectionLabel}`;
+        toast.appendChild(line);
+        toast.style.display = 'flex';
+        clearTimeout(toast._hideTimer);
+        toast._hideTimer = setTimeout(() => {
+            toast.style.display = 'none';
+            toast.innerHTML = '';
+        }, 5000);
+    }
+
+    // Generates a month-in-review PDF for the currently selected patient
+    // (current calendar month) and opens it in a new tab — reuses the
+    // existing /api/reports/generate-monthly + /preview endpoints instead
+    // of sending the doctor to the separate Reports page.
+    async function generateMonthlyReport() {
+        if (!_currentPatientId) return;
+        const btn = document.getElementById('monthlyReportBtn');
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+
+        const now = new Date();
+        const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        try {
+            const res = await fetch(
+                `/api/reports/generate-monthly?patient_id=${_currentPatientId}&month=${month}`,
+                { method: 'POST' }
+            );
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                showLoadError(err.detail || 'Monthly report generation failed');
+                return;
+            }
+            const data = await res.json();
+            window.open(`/api/reports/${data.report_id}/preview`, '_blank');
+        } catch (e) {
+            console.error(e);
+            showLoadError('Monthly report generation');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    }
+
+    async function loadSummary(patientId) {
+        try {
+            const o = await (await fetch(`/api/dashboard/overview?patient_id=${patientId}`)).json();
+            const mins = Math.floor((o.avg_session_duration_seconds || 0) / 60);
+            const secs = Math.round((o.avg_session_duration_seconds || 0) % 60);
+            // Completion Rate gets the same gradient hero treatment as the
+            // dashboard's stat grid, so the two pages read as one product.
+            const stats = [
+                { icon:'fa-check-circle', label:'Completion Rate', value:o.completion_rate + '%', hero: true },
+                { icon:'fa-calendar-check', label:"Today's Sessions", value:o.todays_sessions, cls:'blue' },
+                { icon:'fa-clock',          label:'Avg Session Length', value:`${mins}m ${secs}s`, cls:'blue' },
+                { icon:'fa-file-alt',       label:'Reports Generated', value:o.reports_generated, cls:'blue' },
+            ];
+            document.getElementById('summaryStats').innerHTML = stats.map(s => s.hero ? `
+                <div class="stat-card stat-hero animate-slide-up">
+                    <div class="stat-hero-illustration">${heroIllustrationSVG()}</div>
+                    <div class="stat-content"><div class="stat-icon"><i class="fas ${s.icon}"></i></div></div>
+                    <span class="stat-value">${s.value}</span>
+                    <span class="stat-label">${s.label} · last 30 days</span>
+                </div>
+            ` : `
+                <div class="stat-card variant-${s.cls} animate-slide-up">
+                    <div class="stat-content"><div class="stat-icon ${s.cls}"><i class="fas ${s.icon}"></i></div></div>
+                    <span class="stat-value">${s.value}</span>
+                    <span class="stat-label">${s.label}</span>
+                </div>
+            `).join('');
+
+            rebuild('completionGauge', () => window.MedNovaCharts.buildGauge('completionGauge', o.completion_rate ?? 0, {
+                color: window.MedNovaCharts.Theme.primary,
+            }));
+        } catch (e) { console.error(e); showLoadError('Summary stats'); }
+    }
+
+    function heroIllustrationSVG() {
+        return `<svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="60" cy="60" r="56" stroke="#fff" stroke-width="3"/>
+            <circle cx="60" cy="60" r="38" stroke="#fff" stroke-width="3"/>
+            <path d="M40 61 L54 75 L82 43" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`;
+    }
+
+    async function loadDailySessions(patientId) {
+        try {
+            const rows = await (await fetch(`/api/analytics/daily-sessions?days=30&patient_id=${patientId}`)).json();
+            rebuild('dailyChart', () => window.MedNovaCharts.buildBarChart(
+                'dailyChart', rows.map(r => r.date.slice(5)), rows.map(r => r.count),
+                { color: window.MedNovaCharts.Theme.primary }));
+        } catch (e) { console.error(e); showLoadError('Daily Sessions'); }
+    }
+
+    async function loadMonthlySessions(patientId) {
+        try {
+            const rows = await (await fetch(`/api/analytics/monthly-sessions?months=12&patient_id=${patientId}`)).json();
+            rebuild('monthlyChart', () => window.MedNovaCharts.buildBarChart(
+                'monthlyChart', rows.map(r => r.month), rows.map(r => r.count),
+                { color: window.MedNovaCharts.Theme.teal }));
+        } catch (e) { console.error(e); showLoadError('Monthly Sessions'); }
+    }
+
+    async function loadAccuracyTrend(patientId) {
+        try {
+            const acc = await (await fetch(`/api/analytics/accuracy-trend?days=30&patient_id=${patientId}`)).json();
+            const { Theme, buildLineChart, buildGauge } = window.MedNovaCharts;
+            rebuild('accuracyChart', () => buildLineChart('accuracyChart', acc.map(r => r.date.slice(5)), acc.map(r => r.avg_accuracy),
+                { color: Theme.success, tickCb: v => v + '%', maxY: 100 }));
+
+            const avgAcc = acc.length ? acc.reduce((s, r) => s + (r.avg_accuracy || 0), 0) / acc.length : 0;
+            rebuild('accuracyGauge', () => buildGauge('accuracyGauge', Math.round(avgAcc), { color: Theme.teal }));
+        } catch (e) { console.error(e); showLoadError('Accuracy Trend'); }
+    }
+
+    async function loadCompletionTrend(patientId) {
+        try {
+            const rows = await (await fetch(`/api/analytics/completion-rate-trend?days=30&patient_id=${patientId}`)).json();
+            rebuild('completionChart', () => window.MedNovaCharts.buildLineChart(
+                'completionChart', rows.map(r => r.date.slice(5)), rows.map(r => r.completion_rate),
+                { color: window.MedNovaCharts.Theme.violet, tickCb: v => v + '%', maxY: 100 }));
+        } catch (e) { console.error(e); showLoadError('Completion Rate Trend'); }
+    }
+
+    async function loadExerciseDistribution(patientId) {
+        try {
+            const rows = await (await fetch(`/api/analytics/exercise-distribution?patient_id=${patientId}`)).json();
+            rebuild('exerciseChart', () => window.MedNovaCharts.buildDoughnutChart(
+                'exerciseChart', rows.map(r => r.exercise), rows.map(r => r.count), { centerLabel: 'Exercises' }));
+        } catch (e) { console.error(e); showLoadError('Exercise Distribution'); }
+    }
+
+    // Bilateral hand usage gauge — shows right-hand % with a caption noting
+    // the left-hand %. If this patient hasn't reported hand_side yet
+    // (glove/VR integration not live), the gauge shows 0 and the caption
+    // says so instead of implying real data.
+    async function loadBilateralHandUsage(patientId) {
+        try {
+            const o = await (await fetch(`/api/analytics/bilateral-hand-usage?days=30&patient_id=${patientId}`)).json();
+            const caption = document.getElementById('handUsageCaption');
+            const { Theme } = window.MedNovaCharts;
+            if (o.sessions_counted === 0 || o.right_avg_pct === null) {
+                rebuild('rightHandGauge', () => window.MedNovaCharts.buildGauge('rightHandGauge', 0, { color: Theme.primary }));
+                rebuild('leftHandGauge', () => window.MedNovaCharts.buildGauge('leftHandGauge', 0, { color: Theme.violet }));
+                caption.textContent = 'No hand-side data reported yet';
+                return;
+            }
+            rebuild('rightHandGauge', () => window.MedNovaCharts.buildGauge('rightHandGauge', o.right_avg_pct, { color: Theme.primary }));
+            rebuild('leftHandGauge', () => window.MedNovaCharts.buildGauge('leftHandGauge', o.left_avg_pct, { color: Theme.violet }));
+            caption.textContent = `Right ${o.right_avg_pct}% / Left ${o.left_avg_pct}% · ${o.sessions_counted} sessions`;
+        } catch (e) { console.error(e); showLoadError('Hand Usage'); }
+    }
+
+    async function loadErrorTrend(patientId) {
+        try {
+            const rows = await (await fetch(`/api/analytics/error-trend?days=30&patient_id=${patientId}`)).json();
+            const caption = document.getElementById('errorTrendCaption');
+            if (!rows.length) {
+                caption.textContent = 'No error data yet';
+                rebuild('errorChart', () => window.MedNovaCharts.buildLineChart('errorChart', [], [],
+                    { color: window.MedNovaCharts.Theme.danger }));
+                return;
+            }
+            caption.textContent = 'Avg errors per session, per day';
+            rebuild('errorChart', () => window.MedNovaCharts.buildLineChart(
+                'errorChart', rows.map(r => r.date.slice(5)), rows.map(r => r.avg_errors),
+                { color: window.MedNovaCharts.Theme.danger }));
+        } catch (e) { console.error(e); showLoadError('Error Count Trend'); }
+    }
+
+    async function loadReactionTimeTrend(patientId) {
+        try {
+            const rows = await (await fetch(`/api/analytics/reaction-time-trend?days=30&patient_id=${patientId}`)).json();
+            const caption = document.getElementById('reactionTrendCaption');
+            if (!rows.length) {
+                caption.textContent = 'No reaction time data yet';
+                rebuild('reactionChart', () => window.MedNovaCharts.buildLineChart('reactionChart', [], [],
+                    { color: window.MedNovaCharts.Theme.orange }));
+                return;
+            }
+            caption.textContent = 'Avg response time (ms), per day';
+            rebuild('reactionChart', () => window.MedNovaCharts.buildLineChart(
+                'reactionChart', rows.map(r => r.date.slice(5)), rows.map(r => r.avg_reaction_time_ms),
+                { color: window.MedNovaCharts.Theme.orange, tickCb: v => v + 'ms' }));
+        } catch (e) { console.error(e); showLoadError('Reaction Time Trend'); }
+    }
+
+    async function loadPatientOptions() {
+        const sel = document.getElementById('patientSelect');
+        try {
+            const data = await (await fetch('/api/patients?page_size=100')).json();
+            data.items.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.name} (${p.id})`;
+                sel.appendChild(opt);
+            });
+        } catch (e) {
+            // Without a patient list the whole page is unusable, so this
+            // gets a message right in the dropdown itself, not just a toast.
+            console.error(e);
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = 'Failed to load patients — refresh to retry';
+            sel.appendChild(opt);
+            showLoadError('Patient list');
+        }
+    }
+
+    async function loadPatientProgress(patientId) {
+        try {
+            const rows = await (await fetch(`/api/analytics/patient-progress/${patientId}`)).json();
+            if (rows.error) { showLoadError(rows.error); return; }
+
+            // Chart shows only the most recent 10 sessions - full history
+            // makes the bars unreadable once a patient has many sessions.
+            // renderSessionDeltas/renderWeeklyComparison/renderMonthlyImprovement
+            // below still get the FULL `rows`, since those need the complete
+            // history to compute deltas and weekly/monthly rollups correctly.
+            const chartRows = rows.slice(-10);
+            const labels = chartRows.map(r => new Date(r.date).toLocaleDateString());
+            const { Theme, buildGroupedBarChart } = window.MedNovaCharts;
+            rebuild('patientProgressChart', () => buildGroupedBarChart('patientProgressChart', labels, [
+                { label: 'Accuracy %', data: chartRows.map(r => r.accuracy ?? 0), color: Theme.primary },
+            ]));
+
+            renderSessionDeltas(rows);
+            renderWeeklyComparison(rows);
+            renderMonthlyImprovement(rows);
+
+            await loadProgramCompletion(patientId);
+        } catch (e) { console.error(e); showLoadError('Patient Progress'); }
+    }
+
+    // ------------------------------------------------------------
+    // Growth analytics for the selected patient — all computed
+    // client-side from the same patient-progress rows (date,
+    // accuracy, rom) the chart above already uses, so no extra
+    // API calls are needed.
+    // ------------------------------------------------------------
+
+    // Cached so the "Last N sessions" dropdown can re-render instantly
+    // without re-fetching from the server.
+    let _allSessionDeltaRows = [];
+
+    // How much a session improved (or dropped) versus the one before it.
+    // Deltas are always computed against the FULL session history (so the
+    // first row shown after limiting still compares to its real previous
+    // session, not falsely showing "first session"); only the display
+    // slice respects the dropdown's chosen limit.
+    // Attaches accDelta (vs the previous session) to each row.
+    // Shared by renderSessionDeltas (fresh fetch) and
+    // refreshSessionDeltaDisplay (dropdown re-slice) so the comparison
+    // logic only lives in one place.
+    function computeDeltas(rows) {
+        return rows.map((r, i) => {
+            const prev = i > 0 ? rows[i - 1] : null;
+            const accDelta = prev && r.accuracy != null && prev.accuracy != null ? r.accuracy - prev.accuracy : null;
+            return { ...r, accDelta };
+        });
+    }
+
+    function renderSessionDeltas(rows) {
+        _allSessionDeltaRows = rows;
+        renderSessionDeltaRows(computeDeltas(rows));
+    }
+
+    function renderSessionDeltaRows(withDeltas) {
+        const tbody = document.getElementById('sessionDeltaBody');
+        if (!withDeltas.length) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center">No sessions yet for this patient.</td></tr>';
+            return;
+        }
+
+        const limitSelect = document.getElementById('sessionDeltaLimit');
+        const limitVal = limitSelect ? limitSelect.value : '10';
+        const visible = limitVal === 'all' ? withDeltas : withDeltas.slice(-parseInt(limitVal, 10));
+
+        tbody.innerHTML = visible.map(r => `<tr>
+                <td>${new Date(r.date).toLocaleDateString()}</td>
+                <td>${r.accuracy != null ? r.accuracy + '%' : '-'}</td>
+                <td>${deltaBadge(r.accDelta, '%')}</td>
+            </tr>`).join('');
+    }
+
+    // Called when the "Last N sessions" dropdown changes — re-slices the
+    // already-fetched, already-delta-computed rows, no network call.
+    function refreshSessionDeltaDisplay() {
+        if (!_allSessionDeltaRows.length) return;
+        renderSessionDeltaRows(computeDeltas(_allSessionDeltaRows));
+    }
+
+    // Small colored badge for a delta value: green up-arrow for
+    // improvement, red down-arrow for regression, neutral for no change.
+    function deltaBadge(delta, unit) {
+        if (delta === null || delta === undefined || isNaN(delta)) {
+            return '<span class="caption">first session</span>';
+        }
+        const rounded = Math.round(delta * 10) / 10;
+        if (rounded === 0) return '<span class="status-badge pending">No change</span>';
+        const up = rounded > 0;
+        return `<span class="status-badge ${up ? 'success' : 'danger'}">
+            <i class="fas fa-arrow-${up ? 'up' : 'down'}"></i> ${up ? '+' : ''}${rounded}${unit}
+        </span>`;
+    }
+
+    // Monday of the week a given date falls in — used as the bucket key
+    // for grouping sessions into weeks.
+    function weekStartKey(dateStr) {
+        const d = new Date(dateStr);
+        const day = (d.getDay() + 6) % 7; // 0 = Monday
+        d.setDate(d.getDate() - day);
+        return d.toISOString().slice(0, 10);
+    }
+
+    function groupByWeek(rows) {
+        const map = {};
+        rows.forEach(r => {
+            const key = weekStartKey(r.date);
+            if (!map[key]) map[key] = { accSum: 0, accCount: 0 };
+            if (r.accuracy != null) { map[key].accSum += r.accuracy; map[key].accCount++; }
+        });
+        return Object.keys(map).sort().map(k => ({
+            weekStart: k,
+            avgAccuracy: map[k].accCount ? map[k].accSum / map[k].accCount : null,
+        }));
+    }
+
+    // Bar chart of average accuracy per week, plus a "this week vs
+    // last week" delta caption above it.
+    function renderWeeklyComparison(rows) {
+        const weeks = groupByWeek(rows);
+        const caption = document.getElementById('weeklyDeltaCaption');
+        if (!weeks.length) {
+            rebuild('weeklyChart', () => window.MedNovaCharts.buildBarChart('weeklyChart', [], [], { color: window.MedNovaCharts.Theme.primary }));
+            caption.textContent = '';
+            return;
+        }
+        const labels = weeks.map(w => 'Wk of ' + new Date(w.weekStart).toLocaleDateString());
+        rebuild('weeklyChart', () => window.MedNovaCharts.buildBarChart(
+            'weeklyChart', labels, weeks.map(w => w.avgAccuracy != null ? Math.round(w.avgAccuracy) : 0),
+            { color: window.MedNovaCharts.Theme.primary, tickCb: v => v + '%' }));
+
+        if (weeks.length >= 2 && weeks[weeks.length - 1].avgAccuracy != null && weeks[weeks.length - 2].avgAccuracy != null) {
+            const delta = Math.round((weeks[weeks.length - 1].avgAccuracy - weeks[weeks.length - 2].avgAccuracy) * 10) / 10;
+            const up = delta >= 0;
+            caption.innerHTML = `This week vs last: <strong style="color:${up ? 'var(--success)' : 'var(--danger)'}">${up ? '+' : ''}${delta}%</strong> avg accuracy`;
+        } else {
+            caption.textContent = 'Need at least 2 weeks of sessions to compare';
+        }
+    }
+
+    function groupByMonth(rows) {
+        const map = {};
+        rows.forEach(r => {
+            const key = r.date.slice(0, 7); // YYYY-MM
+            if (!map[key]) map[key] = { accSum: 0, accCount: 0 };
+            if (r.accuracy != null) { map[key].accSum += r.accuracy; map[key].accCount++; }
+        });
+        return Object.keys(map).sort().map(k => ({
+            month: k,
+            avgAccuracy: map[k].accCount ? map[k].accSum / map[k].accCount : null,
+        }));
+    }
+
+    // One-line verdict per month: how much this month's average
+    // accuracy improved over last month's.
+    function renderMonthlyImprovement(rows) {
+        const months = groupByMonth(rows).filter(m => m.avgAccuracy != null);
+        const card = document.getElementById('monthlyImprovementCard');
+        if (months.length < 2) {
+            card.innerHTML = '<div class="caption"><i class="fas fa-circle-info"></i> Need at least 2 months of sessions to show monthly improvement.</div>';
+            return;
+        }
+        const last = months[months.length - 1], prev = months[months.length - 2];
+        const delta = Math.round((last.avgAccuracy - prev.avgAccuracy) * 10) / 10;
+        const up = delta >= 0;
+        const monthLabel = m => new Date(m + '-02').toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+        card.innerHTML = `
+            <div class="stat-card" style="flex:1;min-width:180px;">
+                <span class="stat-value" style="color:${up ? 'var(--success)' : 'var(--danger)'}">${up ? '+' : ''}${delta}%</span>
+                <span class="stat-label">${monthLabel(last.month)} vs ${monthLabel(prev.month)}</span>
+            </div>
+            <div class="stat-card" style="flex:1;min-width:180px;">
+                <span class="stat-value">${Math.round(last.avgAccuracy)}%</span>
+                <span class="stat-label">Avg Accuracy — ${monthLabel(last.month)}</span>
+            </div>`;
+    }
+
+    // Program completion — shown alongside the progress chart for whichever
+    // patient is selected. If the patient has no planned_total_sessions set,
+    // the card says so rather than showing a misleading 0%.
+    async function loadProgramCompletion(patientId) {
+        const row = document.getElementById('programCompletionRow');
+        row.innerHTML = '';
+        try {
+            const o = await (await fetch(`/api/analytics/program-completion/${patientId}`)).json();
+            if (o.planned_total_sessions === null) {
+                row.innerHTML = `
+                    <div class="caption">
+                        <i class="fas fa-circle-info"></i>
+                        No treatment plan session count set for this patient yet.
+                    </div>`;
+                return;
+            }
+            row.innerHTML = `
+                <div class="stat-card" style="flex:1;min-width:180px;">
+                    <span class="stat-value">${o.completion_pct}%</span>
+                    <span class="stat-label">Program Completion</span>
+                </div>
+                <div class="stat-card" style="flex:1;min-width:180px;">
+                    <span class="stat-value">${o.completed_sessions} / ${o.planned_total_sessions}</span>
+                    <span class="stat-label">Sessions Completed</span>
+                </div>`;
+        } catch (e) { console.error(e); showLoadError('Program Completion'); }
+    }
+
+    // Destroys any existing Chart.js instance bound to a canvas before
+    // rebuilding it — needed since these loaders can re-run (period toggles,
+    // patient dropdown changes) and MedNovaCharts builders always create fresh.
+    function rebuild(id, factory) {
+        const canvas = document.getElementById(id);
+        if (!canvas) return null;
+        window.Chart.getChart(canvas)?.destroy();
+        return factory();
+    }
+
+    // ------------------------------------------------------------------
+    // Themed confirm modal — same pattern as session.html, replaces
+    // window.confirm() so dialogs match the app's look consistently.
+    // Usage: const ok = await showConfirmModal({ title, message, danger });
+    // ------------------------------------------------------------------
+    let _confirmResolve = null;
+
+    function showConfirmModal({ title = 'Confirm', message = 'Are you sure?', danger = false, confirmText = 'Confirm' } = {}) {
+        document.getElementById('confirmModalTitleText').textContent = title;
+        document.getElementById('confirmModalMessage').textContent = message;
+
+        const confirmBtn = document.getElementById('confirmModalConfirmBtn');
+        confirmBtn.textContent = confirmText;
+        confirmBtn.className = danger ? 'btn-danger' : 'btn-primary';
+
+        const icon = document.getElementById('confirmModalIcon');
+        icon.className = danger ? 'fas fa-triangle-exclamation' : 'fas fa-circle-question';
+        icon.style.color = danger ? 'var(--danger, #ff453a)' : 'var(--primary)';
+
+        document.getElementById('confirmModal').style.display = 'flex';
+
+        return new Promise((resolve) => { _confirmResolve = resolve; });
+    }
+
+    function closeConfirmModal(result) {
+        document.getElementById('confirmModal').style.display = 'none';
+        if (_confirmResolve) {
+            _confirmResolve(result);
+            _confirmResolve = null;
+        }
+    }
+
+    async function handleLogout() {
+        const ok = await showConfirmModal({
+            title: 'Log Out',
+            message: 'Are you sure you want to log out?',
+            confirmText: 'Log Out',
+        });
+        if (ok) { try { await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch(e) {} window.location.href = '/'; }
+    }
+    </script>
+</body>
+</html>

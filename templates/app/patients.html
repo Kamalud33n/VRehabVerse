@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patients - MedNova VR Rehab</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=8">
+    <link rel="stylesheet" href="/static/css/auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img class="logo-icon" src="/assets/logo.png?v=2" alt="MedNova logo" width="40" height="40">
+                    <div class="logo-text">
+                        <span class="logo-title">MedNova</span>
+                        <span class="logo-subtitle">VR Rehab Platform</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+                <a href="/patients"  class="nav-item active"><i class="fas fa-users"></i><span>Patients</span></a>
+                <a href="/session"   class="nav-item"><i class="fas fa-vr-cardboard"></i><span>Sessions</span></a>
+                <a href="/reports"   class="nav-item"><i class="fas fa-file-alt"></i><span>Reports</span></a>
+                <a href="/analytics" class="nav-item"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
+                <a href="/settings"   class="nav-item"><i class="fas fa-gear"></i><span>Settings</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="status-dot online"></span>
+                    <span>System Online</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+                    <div class="breadcrumb">
+                        <span>Home</span><i class="fas fa-chevron-right"></i>
+                        <span class="active">Patients</span>
+                    </div>
+                    <div class="top-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="globalSearch" placeholder="Search patients, sessions...">
+                    </div>
+                </div>
+                <div class="top-bar-right">
+                    <div class="notif-wrap">
+                        <button class="icon-btn" id="notifBtn" title="Notifications"><i class="fas fa-bell"></i><span class="dot-badge" id="notifDot"></span></button>
+                        <div class="notif-panel" id="notifPanel">
+                            <div class="notif-panel-header">Recent Activity</div>
+                            <div class="notif-panel-body" id="notifList"><div class="notif-empty">Loading...</div></div>
+                        </div>
+                    </div>
+                    <div class="topbar-avatar"><i class="fas fa-user-doctor"></i></div>
+                    <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-area" style="display:flex;flex-direction:column;gap:20px;">
+
+                <div class="patients-header">
+                    <div>
+                        <h1 class="page-title">Patients</h1>
+                        <p class="header-subtitle">Manage patient records and treatment assignments</p>
+                    </div>
+                    <button class="btn-primary" onclick="openPatientModal()"><i class="fas fa-user-plus"></i> Add Patient</button>
+                </div>
+
+                <div class="table-container" style="padding:16px 20px;">
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+                        <div class="search-box">
+                            <input type="text" class="form-input" id="searchInput" placeholder="Search by name, ID or phone..." style="width:280px;">
+                            <button class="btn-secondary" onclick="reloadPatients(1)"><i class="fas fa-search"></i></button>
+                        </div>
+                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);">
+                            <input type="checkbox" id="includeInactive" onchange="reloadPatients(1)"> Show inactive
+                        </label>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Patient ID</th>
+                                <th>Name</th>
+                                <th>Age / Gender</th>
+                                <th>Diagnosis</th>
+                                <th>Doctor</th>
+                                <th>Therapist</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientsBody">
+                            <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--border);">
+                        <span class="caption" id="paginationInfo"></span>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn-icon" id="prevPageBtn" onclick="changePage(-1)"><i class="fas fa-chevron-left"></i></button>
+                            <button class="btn-icon" id="nextPageBtn" onclick="changePage(1)"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Add / Edit Patient Modal -->
+    <div class="modal" id="patientModal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="section-title" id="patientModalTitle">Add Patient</h3>
+                <button class="modal-close" onclick="closePatientModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+                <div class="form-group"><label>Full Name *</label><input type="text" class="form-input" id="f_name"></div>
+                <div class="form-group"><label>Age *</label><input type="number" class="form-input" id="f_age"></div>
+                <div class="form-group">
+                    <label>Gender *</label>
+                    <select class="form-input" id="f_gender">
+                        <option>Male</option><option>Female</option><option>Other</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Weight (kg)</label><input type="number" step="0.1" class="form-input" id="f_weight"></div>
+                <div class="form-group"><label>Height (cm)</label><input type="number" step="0.1" class="form-input" id="f_height"></div>
+                <div class="form-group"><label>Diagnosis</label><input type="text" class="form-input" id="f_diagnosis"></div>
+                <div class="form-group"><label>Affected Body Part</label><input type="text" class="form-input" id="f_body_part"></div>
+                <div class="form-group"><label>Doctor Name</label><input type="text" class="form-input" id="f_doctor"></div>
+                <div class="form-group"><label>Therapist Name</label><input type="text" class="form-input" id="f_therapist"></div>
+                <div class="form-group"><label>Phone</label><input type="text" class="form-input" id="f_phone"></div>
+                <div class="form-group" style="grid-column:1/-1;"><label>Email</label><input type="email" class="form-input" id="f_email"></div>
+                <div class="form-group" style="grid-column:1/-1;"><label>Medical History</label><textarea class="form-input" id="f_history" rows="2"></textarea></div>
+                <div class="form-group" style="grid-column:1/-1;"><label>Exercise Plan</label><textarea class="form-input" id="f_plan" rows="2"></textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closePatientModal()">Cancel</button>
+                <button class="btn-primary" id="savePatientBtn" onclick="savePatient()">Save Patient</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+    let _page = 1;
+    let _pageSize = 20;
+    let _total = 0;
+    let _editingId = null;
+    let _patientsById = {};
+
+    // Deterministic color per patient name, so the same person always
+    // gets the same avatar color across reloads/pages.
+    const AVATAR_COLORS = ['#0A84FF', '#BF5AF2', '#00C7BE', '#FF9500', '#32D74B', '#64D2FF'];
+    function avatarColor(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+    }
+    function initials(name) {
+        return (name || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    }
+
+    function emptyPatientsSVG() {
+        return `<svg viewBox="0 0 100 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="38" cy="34" r="14" fill="var(--primary-tint)"/>
+            <path d="M18 68c0-12 9-20 20-20s20 8 20 20" stroke="var(--primary)" stroke-width="4" stroke-linecap="round" fill="none"/>
+            <circle cx="72" cy="26" r="9" fill="var(--violet-tint)"/>
+            <path d="M58 50c0-8 6-13 14-13s14 5 14 13" stroke="var(--violet)" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.7"/>
+        </svg>`;
+    }
+
+    function emptyErrorSVG() {
+        return `<svg viewBox="0 0 100 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="42" r="34" fill="var(--danger-tint)"/>
+            <rect x="46" y="26" width="8" height="22" rx="4" fill="var(--danger)"/>
+            <circle cx="50" cy="56" r="4.5" fill="var(--danger)"/>
+        </svg>`;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('menuToggle')?.addEventListener('click', () =>
+            document.querySelector('.sidebar').classList.toggle('open'));
+        document.getElementById('searchInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') reloadPatients(1);
+        });
+        const _qParam = new URLSearchParams(window.location.search).get('q');
+        if (_qParam) {
+            document.getElementById('searchInput').value = _qParam;
+            const gs = document.getElementById('globalSearch');
+            if (gs) gs.value = _qParam;
+        }
+        reloadPatients(1);
+    });
+
+    async function reloadPatients(page) {
+        _page = page;
+        const search = document.getElementById('searchInput').value.trim();
+        const includeInactive = document.getElementById('includeInactive').checked;
+        const tbody = document.getElementById('patientsBody');
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Loading...</td></tr>';
+
+        try {
+            const params = new URLSearchParams({
+                page: _page, page_size: _pageSize, include_inactive: includeInactive,
+            });
+            if (search) params.set('search', search);
+
+            const data = await (await fetch(`/api/patients?${params.toString()}`)).json();
+            _total = data.total;
+
+            if (!data.items.length) {
+                tbody.innerHTML = `<tr><td colspan="8">
+                    <div class="empty-illustration">
+                        ${emptyPatientsSVG()}
+                        <span class="empty-title">No patients found</span>
+                        <span class="empty-sub">Try a different search, or add your first patient.</span>
+                    </div>
+                </td></tr>`;
+            } else {
+                _patientsById = {};
+                data.items.forEach(p => { _patientsById[p.id] = p; });
+                tbody.innerHTML = data.items.map(p => `
+                    <tr>
+                        <td>${escapeHtml(p.id)}</td>
+                        <td>
+                            <div class="name-cell">
+                                <div class="avatar-circle" style="background:${avatarColor(p.name)}">${escapeHtml(initials(p.name))}</div>
+                                <span style="font-weight:600;">${escapeHtml(p.name)}</span>
+                            </div>
+                        </td>
+                        <td>${escapeHtml(String(p.age))} / ${escapeHtml(p.gender)}</td>
+                        <td>${p.diagnosis ? escapeHtml(p.diagnosis) : '-'}</td>
+                        <td>${p.doctor_name ? escapeHtml(p.doctor_name) : ''}</td>
+                        <td>${p.therapist_name ? escapeHtml(p.therapist_name) : '-'}</td>
+                        <td><span class="status-badge ${p.is_active ? 'success' : 'danger'}">${p.is_active ? 'Active' : 'Inactive'}</span></td>
+                        <td>
+                            <button class="btn-icon" title="Edit" onclick="editPatientById('${p.id}')"><i class="fas fa-pen"></i></button>
+                            ${p.is_active ? `<button class="btn-icon" title="Deactivate" onclick="deactivatePatient('${p.id}')"><i class="fas fa-user-slash"></i></button>` : ''}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+            updatePagination();
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="8">
+                <div class="empty-illustration is-error">
+                    ${emptyErrorSVG()}
+                    <span class="empty-title">Couldn't load patients</span>
+                    <button class="retry-btn" onclick="reloadPatients(_page)">Retry</button>
+                </div>
+            </td></tr>`;
+        }
+    }
+
+    // Looks up the row's data from the last render instead of round-tripping
+    // JSON through an inline onclick attribute (which breaks on names with
+    // quotes/apostrophes, e.g. "O'Brien").
+    function editPatientById(id) {
+        const p = _patientsById[id];
+        if (p) editPatient(p);
+    }
+
+    function updatePagination() {
+        const start = _total ? (_page - 1) * _pageSize + 1 : 0;
+        const end = Math.min(_page * _pageSize, _total);
+        document.getElementById('paginationInfo').textContent = `Showing ${start}-${end} of ${_total}`;
+        document.getElementById('prevPageBtn').disabled = _page <= 1;
+        document.getElementById('nextPageBtn').disabled = end >= _total;
+    }
+
+    function changePage(delta) {
+        const next = _page + delta;
+        if (next < 1) return;
+        reloadPatients(next);
+    }
+
+    function openPatientModal() {
+        _editingId = null;
+        document.getElementById('patientModalTitle').textContent = 'Add Patient';
+        ['name','age','weight','height','diagnosis','body_part','doctor','therapist','phone','email','history','plan']
+            .forEach(k => document.getElementById('f_' + k).value = '');
+        document.getElementById('f_gender').value = 'Male';
+        document.getElementById('patientModal').style.display = 'flex';
+    }
+
+    function editPatient(p) {
+        _editingId = p.id;
+        document.getElementById('patientModalTitle').textContent = 'Edit Patient';
+        document.getElementById('f_name').value = p.name || '';
+        document.getElementById('f_age').value = p.age || '';
+        document.getElementById('f_gender').value = p.gender || 'Male';
+        document.getElementById('f_weight').value = p.weight ?? '';
+        document.getElementById('f_height').value = p.height ?? '';
+        document.getElementById('f_diagnosis').value = p.diagnosis || '';
+        document.getElementById('f_body_part').value = p.affected_body_part || '';
+        document.getElementById('f_doctor').value = p.doctor_name || '';
+        document.getElementById('f_therapist').value = p.therapist_name || '';
+        document.getElementById('f_phone').value = p.phone || '';
+        document.getElementById('f_email').value = p.email || '';
+        document.getElementById('f_history').value = p.medical_history || '';
+        document.getElementById('f_plan').value = p.exercise_plan || '';
+        document.getElementById('patientModal').style.display = 'flex';
+    }
+
+    function closePatientModal() {
+        document.getElementById('patientModal').style.display = 'none';
+    }
+
+    async function savePatient() {
+        const payload = {
+            name: document.getElementById('f_name').value.trim(),
+            age: parseInt(document.getElementById('f_age').value || '0', 10),
+            gender: document.getElementById('f_gender').value,
+            weight: parseFloat(document.getElementById('f_weight').value) || null,
+            height: parseFloat(document.getElementById('f_height').value) || null,
+            diagnosis: document.getElementById('f_diagnosis').value.trim() || null,
+            affected_body_part: document.getElementById('f_body_part').value.trim() || null,
+            doctor_name: document.getElementById('f_doctor').value.trim() || null,
+            therapist_name: document.getElementById('f_therapist').value.trim() || null,
+            phone: document.getElementById('f_phone').value.trim() || null,
+            email: document.getElementById('f_email').value.trim() || null,
+            medical_history: document.getElementById('f_history').value.trim() || null,
+            exercise_plan: document.getElementById('f_plan').value.trim() || null,
+        };
+
+        if (!payload.name || !payload.age || !payload.gender) {
+            alert('Name, Age and Gender are required.');
+            return;
+        }
+
+        const btn = document.getElementById('savePatientBtn');
+        btn.disabled = true;
+        try {
+            let res;
+            if (_editingId) {
+                res = await fetch(`/api/patients/${_editingId}`, {
+                    method: 'PUT', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({...payload, is_active: true}),
+                });
+            } else {
+                res = await fetch('/api/patients', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(payload),
+                });
+            }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Save failed');
+            }
+            closePatientModal();
+            reloadPatients(_page);
+        } catch (e) {
+            alert(e.message || 'Failed to save patient.');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function deactivatePatient(id) {
+        if (!confirm('Deactivate this patient?')) return;
+        try {
+            const res = await fetch(`/api/patients/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Failed');
+            reloadPatients(_page);
+        } catch (e) {
+            alert('Failed to deactivate patient.');
+        }
+    }
+
+    </script>
+</body>
+</html>

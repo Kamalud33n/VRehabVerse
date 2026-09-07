@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - MedNova VR Rehab</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=8">
+    <link rel="stylesheet" href="/static/css/auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ---- Reports page enhancements (scoped, builds on existing tokens) ---- */
+        .reports-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 14px 20px;
+        }
+        .toolbar-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .toolbar-filter-label {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; color: var(--text-secondary, #64748b);
+            white-space: nowrap;
+        }
+        .report-count-chip {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            background: var(--primary-tint);
+            padding: 6px 12px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .table-scroll { overflow-x: auto; }
+        .table-scroll table { min-width: 760px; }
+
+        #reportsBody tr { transition: background-color .12s ease; }
+        #reportsBody tr:hover:not(.no-hover) { background: var(--primary-tint); }
+
+        .report-id-chip {
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 12.5px;
+            background: rgba(0,0,0,0.04);
+            padding: 3px 8px;
+            border-radius: 6px;
+            color: var(--text-secondary, #475569);
+        }
+
+        .patient-cell { display: flex; align-items: center; gap: 10px; }
+        .avatar-circle {
+            width: 30px; height: 30px; min-width: 30px;
+            border-radius: 50%;
+            background: var(--primary-tint);
+            color: var(--primary);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 700;
+            text-transform: uppercase;
+        }
+        .patient-cell-name { font-weight: 600; font-size: 13.5px; line-height: 1.3; }
+        .patient-cell-id { font-size: 11.5px; color: var(--text-secondary, #94a3b8); }
+
+        .range-cell { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+        .range-cell i { color: var(--text-secondary, #94a3b8); font-size: 11px; }
+
+        .status-badge.type-session { background: var(--primary-tint); color: var(--primary); }
+        .status-badge.type-range { background: var(--secondary-tint); color: var(--secondary); }
+        .status-badge.type-monthly { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+        .status-badge.type-comparative { background: transparent; color: var(--secondary); border: 1px solid var(--secondary); }
+        .status-badge.type-admin { background: #1f2937; color: #fff; }
+        .avatar-circle.dept-avatar { background: var(--secondary-tint); color: var(--secondary); }
+
+        .generated-by-cell { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+        .generated-by-cell i { font-size: 11px; color: var(--text-secondary, #94a3b8); }
+
+        .row-actions { display: inline-flex; gap: 4px; }
+
+        .empty-cta {
+            margin-top: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 8px;
+        }
+        .empty-cta:hover { background: var(--primary-tint); }
+
+        .pagination-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+        .pagination-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .page-size-select { border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; font-size: 12.5px; background: #fff; color: inherit; }
+
+        /* Generate modal polish */
+        .segmented { display: inline-flex; padding: 3px; background: rgba(0,0,0,0.04); border-radius: 10px; gap: 2px; }
+        .segmented .filter-btn { border-radius: 8px; }
+
+        .field-label { display: flex; align-items: center; gap: 6px; }
+        .field-label i { font-size: 11px; color: var(--text-secondary, #94a3b8); width: 12px; text-align: center; }
+        .required-mark { color: var(--danger); margin-left: 2px; }
+
+        .preset-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+        .preset-row .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+        .inline-alert {
+            display: none;
+            align-items: flex-start;
+            gap: 8px;
+            background: var(--danger-tint);
+            color: var(--danger);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            margin: 0 20px 12px;
+        }
+        .inline-alert.show { display: flex; }
+        .inline-alert i { margin-top: 2px; }
+
+        .btn-primary[disabled], .btn-secondary[disabled] { opacity: .7; cursor: not-allowed; }
+        .btn-spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; margin-right: 6px; vertical-align: -2px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .preview-modal-actions { display: flex; gap: 8px; align-items: center; }
+
+        /* Responsive: collapse table into stacked cards */
+        @media (max-width: 760px) {
+            .table-scroll table, .table-scroll thead, .table-scroll tbody, .table-scroll th, .table-scroll td, .table-scroll tr { display: block; width: 100%; }
+            .table-scroll thead { display: none; }
+            .table-scroll tr {
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                margin-bottom: 10px;
+                padding: 10px 12px;
+            }
+            .table-scroll td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                padding: 7px 0;
+                border: none !important;
+                text-align: right;
+            }
+            .table-scroll td::before {
+                content: attr(data-label);
+                font-size: 11.5px;
+                font-weight: 600;
+                color: var(--text-secondary, #94a3b8);
+                text-align: left;
+            }
+            .table-scroll td:empty { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img class="logo-icon" src="/assets/logo.png?v=2" alt="MedNova logo" width="40" height="40">
+                    <div class="logo-text">
+                        <span class="logo-title">MedNova</span>
+                        <span class="logo-subtitle">VR Rehab Platform</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+                <a href="/patients"  class="nav-item"><i class="fas fa-users"></i><span>Patients</span></a>
+                <a href="/session"   class="nav-item"><i class="fas fa-vr-cardboard"></i><span>Sessions</span></a>
+                <a href="/reports"   class="nav-item active"><i class="fas fa-file-alt"></i><span>Reports</span></a>
+                <a href="/analytics" class="nav-item"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
+                <a href="/settings"   class="nav-item"><i class="fas fa-gear"></i><span>Settings</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="status-dot online"></span>
+                    <span>System Online</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+                    <div class="breadcrumb">
+                        <span>Home</span><i class="fas fa-chevron-right"></i>
+                        <span class="active">Reports</span>
+                    </div>
+                    <div class="top-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="globalSearch" placeholder="Search patients, sessions...">
+                    </div>
+                </div>
+                <div class="top-bar-right">
+                    <div class="notif-wrap">
+                        <button class="icon-btn" id="notifBtn" title="Notifications"><i class="fas fa-bell"></i><span class="dot-badge" id="notifDot"></span></button>
+                        <div class="notif-panel" id="notifPanel">
+                            <div class="notif-panel-header">Recent Activity</div>
+                            <div class="notif-panel-body" id="notifList"><div class="notif-empty">Loading...</div></div>
+                        </div>
+                    </div>
+                    <div class="topbar-avatar"><i class="fas fa-user-doctor"></i></div>
+                    <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-area" style="display:flex;flex-direction:column;gap:20px;">
+
+                <div class="reports-header">
+                    <div>
+                        <h1 class="page-title">Reports</h1>
+                        <p class="header-subtitle">Generate and download session summary PDFs</p>
+                    </div>
+                    <button class="btn-primary" onclick="openGenerateModal()"><i class="fas fa-file-circle-plus"></i> Generate Report</button>
+                </div>
+
+                <div class="table-container reports-toolbar">
+                    <div class="toolbar-left">
+                        <span class="toolbar-filter-label"><i class="fas fa-filter"></i> Patient</span>
+                        <input type="text" class="form-input" id="patientFilter" list="patientsDatalist"
+                               placeholder="All Patients" style="max-width:260px;" autocomplete="off"
+                               oninput="onPatientFilterInput()">
+                    </div>
+                    <span class="report-count-chip" id="reportCountChip">Loading…</span>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Session / Range</th>
+                                    <th>Type</th>
+                                    <th>Generated By</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportsBody">
+                                <tr class="no-hover"><td colspan="6" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-bar">
+                        <div class="pagination-left">
+                            <span class="caption" id="paginationInfo"></span>
+                            <label class="caption" style="display:flex;align-items:center;gap:6px;">
+                                Rows per page
+                                <select class="page-size-select" id="pageSizeSelect" onchange="changePageSize(this.value)">
+                                    <option value="10">10</option>
+                                    <option value="20" selected>20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn-icon" id="prevPageBtn" title="Previous page" onclick="changePage(-1)"><i class="fas fa-chevron-left"></i></button>
+                            <button class="btn-icon" id="nextPageBtn" title="Next page" onclick="changePage(1)"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Report Preview Modal -->
+    <div class="modal" id="previewModal" style="display:none;">
+        <div class="modal-content" style="max-width:820px;width:92%;height:85vh;display:flex;flex-direction:column;">
+            <div class="modal-header">
+                <h3 class="section-title">Report Preview</h3>
+                <div class="preview-modal-actions">
+                    <a class="btn-icon" id="previewDownloadBtn" title="Download" href="#"><i class="fas fa-download"></i></a>
+                    <button class="btn-icon btn-icon-danger" title="Delete" onclick="deleteReport(_previewReportId)"><i class="fas fa-trash"></i></button>
+                    <button class="btn-icon" title="Close" onclick="closePreviewModal()"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <iframe id="previewFrame" src="" style="flex:1;width:100%;border:none;border-radius:8px;background:#fff;"></iframe>
+        </div>
+    </div>
+
+    <!-- Shared patient suggestions for the typeahead patient pickers below.
+         Populated once from /api/patients — native browser filter-as-you-type,
+         no separate search box needed. -->
+    <datalist id="patientsDatalist"></datalist>
+
+    <!-- Generate Report Modal -->
+    <div class="modal" id="generateModal" style="display:none;">
+        <div class="modal-content" style="max-width:640px;width:94%;">
+            <div class="modal-header">
+                <h3 class="section-title">Generate Report</h3>
+                <button class="modal-close" onclick="closeGenerateModal()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="form-group" style="padding:16px 20px 0;">
+                <label class="field-label"><i class="fas fa-list-check"></i> Report Type</label>
+                <select class="form-input" id="reportTypeSelect" onchange="switchGenerateTab(this.value)">
+                    <option value="session">Session Report — immediate summary after a session</option>
+                    <option value="range">Date Range Report — custom range for one patient</option>
+                    <option value="monthly">Monthly Report — month vs. therapeutic goals</option>
+                    <option value="comparative">Comparative Report — trend across periods</option>
+                    <option value="admin">Administrative Report — department-level stats</option>
+                </select>
+            </div>
+
+            <div class="inline-alert" id="generateAlert"><i class="fas fa-triangle-exclamation"></i><span id="generateAlertText"></span></div>
+
+            <!-- Panel: single completed session (existing flow) -->
+            <div id="sessionPanel" style="padding:16px 20px;">
+                <div class="form-group">
+                    <label class="field-label"><i class="fas fa-vr-cardboard"></i> Completed Session<span class="required-mark">*</span></label>
+                    <select class="form-input" id="g_session"><option value="">Loading sessions...</option></select>
+                </div>
+            </div>
+
+            <!-- Panel: aggregated report across a date range -->
+            <div id="rangePanel" style="padding:16px 20px;display:none;">
+                <div class="form-group">
+                    <label class="field-label"><i class="fas fa-user-injured"></i> Patient<span class="required-mark">*</span></label>
+                    <input type="text" class="form-input" id="r_patient" list="patientsDatalist"
+                           placeholder="Type to search patient..." autocomplete="off">
+                </div>
+                <div class="preset-row" id="presetRow">
+                    <button type="button" class="filter-btn" data-preset="week" onclick="applyRangePreset('week')">This Week</button>
+                    <button type="button" class="filter-btn" data-preset="month" onclick="applyRangePreset('month')">This Month</button>
+                    <button type="button" class="filter-btn" data-preset="30d" onclick="applyRangePreset('30d')">Last 30 Days</button>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+                    <div class="form-group">
+                        <label class="field-label"><i class="fas fa-calendar-day"></i> Start Date<span class="required-mark">*</span></label>
+                        <input type="date" class="form-input" id="r_start" onchange="clearPresetHighlight()">
+                    </div>
+                    <div class="form-group">
+                        <label class="field-label"><i class="fas fa-calendar-day"></i> End Date<span class="required-mark">*</span></label>
+                        <input type="date" class="form-input" id="r_end" onchange="clearPresetHighlight()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel: monthly report — month average vs. therapeutic goals -->
+            <div id="monthlyPanel" style="padding:16px 20px;display:none;">
+                <div class="form-group">
+                    <label class="field-label"><i class="fas fa-user-injured"></i> Patient<span class="required-mark">*</span></label>
+                    <input type="text" class="form-input" id="m_patient" list="patientsDatalist"
+                           placeholder="Type to search patient..." autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label class="field-label"><i class="fas fa-calendar-day"></i> Month<span class="required-mark">*</span></label>
+                    <input type="month" class="form-input" id="m_month">
+                </div>
+            </div>
+
+            <!-- Panel: comparative report — trend across 2+ periods -->
+            <div id="comparativePanel" style="padding:16px 20px;display:none;">
+                <div class="form-group">
+                    <label class="field-label"><i class="fas fa-user-injured"></i> Patient<span class="required-mark">*</span></label>
+                    <input type="text" class="form-input" id="c_patient" list="patientsDatalist"
+                           placeholder="Type to search patient..." autocomplete="off">
+                </div>
+                <label class="field-label" style="margin-bottom:6px;"><i class="fas fa-arrows-left-right"></i> Periods to compare<span class="required-mark">*</span></label>
+                <div id="comparativePeriods"></div>
+                <button type="button" class="btn-secondary" style="margin-top:4px;" onclick="addPeriodRow()"><i class="fas fa-plus"></i> Add Period</button>
+            </div>
+
+            <!-- Panel: administrative report — department-level, no single patient -->
+            <div id="adminPanel" style="padding:16px 20px;display:none;">
+                <div class="preset-row" id="adminPresetRow">
+                    <button type="button" class="filter-btn" data-preset="month" onclick="applyAdminPreset('month')">This Month</button>
+                    <button type="button" class="filter-btn" data-preset="lastmonth" onclick="applyAdminPreset('lastmonth')">Last Month</button>
+                    <button type="button" class="filter-btn" data-preset="quarter" onclick="applyAdminPreset('quarter')">This Quarter</button>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+                    <div class="form-group">
+                        <label class="field-label"><i class="fas fa-calendar-day"></i> Start Date<span class="required-mark">*</span></label>
+                        <input type="date" class="form-input" id="adm_start" onchange="clearAdminPresetHighlight()">
+                    </div>
+                    <div class="form-group">
+                        <label class="field-label"><i class="fas fa-calendar-day"></i> End Date<span class="required-mark">*</span></label>
+                        <input type="date" class="form-input" id="adm_end" onchange="clearAdminPresetHighlight()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeGenerateModal()">Cancel</button>
+                <button class="btn-primary" id="generateBtn" onclick="generateReport()"><span id="generateBtnLabel">Generate</span></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+    let _page = 1;
+    let _pageSize = 20;
+    let _total = 0;
+
+    function emptyReportsSVG() {
+        return `<svg viewBox="0 0 100 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="24" y="14" width="52" height="64" rx="7" fill="var(--primary-tint)"/>
+            <rect x="34" y="28" width="32" height="5" rx="2.5" fill="var(--primary)"/>
+            <rect x="34" y="40" width="32" height="5" rx="2.5" fill="var(--primary)" opacity="0.6"/>
+            <rect x="34" y="52" width="20" height="5" rx="2.5" fill="var(--primary)" opacity="0.4"/>
+            <circle cx="72" cy="66" r="14" fill="var(--secondary-tint)"/>
+            <path d="M66 66 l4.5 4.5 l8 -9" stroke="var(--secondary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`;
+    }
+
+    function emptyErrorSVG() {
+        return `<svg viewBox="0 0 100 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="42" r="34" fill="var(--danger-tint)"/>
+            <rect x="46" y="26" width="8" height="22" rx="4" fill="var(--danger)"/>
+            <circle cx="50" cy="56" r="4.5" fill="var(--danger)"/>
+        </svg>`;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        document.getElementById('menuToggle')?.addEventListener('click', () =>
+            document.querySelector('.sidebar').classList.toggle('open'));
+        await loadAllPatients();
+        reloadReports(1);
+
+        // Arrived here from the session summary popup ("View Analytics")
+        // — open the generate modal with that exact session pre-selected,
+        // regardless of whether it falls inside the default 50-session page.
+        const params = new URLSearchParams(window.location.search);
+        const sessionId = params.get('session_id');
+        if (sessionId) {
+            await openGenerateModal(sessionId);
+        }
+    });
+
+    let _patientNameMap = {};
+    let _patientLabelToId = {};
+    let _patientsLoaded = false;
+
+    // Single source of patient data for every picker on this page (the
+    // toolbar filter + the 3 typeahead inputs in the generate modal).
+    // Feeds the shared <datalist id="patientsDatalist"> so typing in any
+    // of those inputs filters suggestions natively — no custom search UI.
+    async function loadAllPatients() {
+        if (_patientsLoaded) return;
+        try {
+            const data = await (await fetch('/api/patients?page_size=100')).json();
+            const datalist = document.getElementById('patientsDatalist');
+            data.items.forEach(p => {
+                _patientNameMap[p.id] = p.name;
+                const label = `${p.name} (${p.id})`;
+                _patientLabelToId[label] = p.id;
+                const opt = document.createElement('option');
+                opt.value = label;
+                datalist.appendChild(opt);
+            });
+            _patientsLoaded = true;
+        } catch (e) { console.error(e); }
+    }
+
+    // Resolves a typeahead input's current text back to a patient id.
+    // Only matches once the text is the exact "Name (ID)" label picked
+    // from the datalist — partial typing just shows suggestions and
+    // resolves to nothing yet.
+    function getSelectedPatientId(inputId) {
+        const el = document.getElementById(inputId);
+        return _patientLabelToId[el.value.trim()] || '';
+    }
+
+    function onPatientFilterInput() {
+        const el = document.getElementById('patientFilter');
+        if (!el.value.trim()) { reloadReports(1); return; } // cleared -> back to All Patients
+        if (getSelectedPatientId('patientFilter')) reloadReports(1);
+    }
+
+    function initials(name) {
+        if (!name) return '?';
+        const parts = name.trim().split(/\s+/);
+        return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || name[0].toUpperCase();
+    }
+
+    function typeLabel(type) {
+        return {
+            session_summary: 'Session',
+            range: 'Date Range',
+            monthly: 'Monthly',
+            comparative: 'Comparative',
+            admin: 'Administrative',
+        }[type] || type;
+    }
+
+    function typeBadgeClass(type) {
+        return {
+            session_summary: 'type-session',
+            range: 'type-range',
+            monthly: 'type-monthly',
+            comparative: 'type-comparative',
+            admin: 'type-admin',
+        }[type] || 'type-session';
+    }
+
+    function formatMonthLabel(iso) {
+        if (!iso) return '-';
+        return new Date(iso).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+    }
+
+    function changePageSize(val) {
+        _pageSize = parseInt(val, 10) || 20;
+        reloadReports(1);
+    }
+
+    async function reloadReports(page) {
+        _page = page;
+        const patientId = getSelectedPatientId('patientFilter');
+        const tbody = document.getElementById('reportsBody');
+        tbody.innerHTML = '<tr class="no-hover"><td colspan="6" class="text-center">Loading...</td></tr>';
+
+        try {
+            const params = new URLSearchParams({page: _page, page_size: _pageSize});
+            if (patientId) params.set('patient_id', patientId);
+
+            const data = await (await fetch(`/api/reports?${params.toString()}`)).json();
+            _total = data.total;
+
+            if (!data.items.length) {
+                tbody.innerHTML = `<tr class="no-hover"><td colspan="6">
+                    <div class="empty-illustration">
+                        ${emptyReportsSVG()}
+                        <span class="empty-title">No reports generated yet</span>
+                        <span class="empty-sub">Generate one from a completed session to see it here.</span>
+                        <button type="button" class="empty-cta" onclick="openGenerateModal()"><i class="fas fa-file-circle-plus"></i> Generate a report</button>
+                    </div>
+                </td></tr>`;
+            } else {
+                tbody.innerHTML = data.items.map(r => {
+                    const patientName = _patientNameMap[r.patient_id] || 'Unknown patient';
+                    let rangeCell = '-';
+                    if (r.session_id) {
+                        rangeCell = `<span class="range-cell"><i class="fas fa-hashtag"></i>${r.session_id}</span>`;
+                    } else if (r.report_type === 'monthly' && r.period_start) {
+                        rangeCell = `<span class="range-cell"><i class="fas fa-calendar-days"></i>${formatMonthLabel(r.period_start)}</span>`;
+                    } else if (r.report_type === 'comparative' && r.periods && r.periods.length) {
+                        const first = r.periods[0].label, last = r.periods[r.periods.length - 1].label;
+                        rangeCell = `<span class="range-cell"><i class="fas fa-arrows-left-right"></i>${first} → ${last} (${r.periods.length})</span>`;
+                    } else if (r.period_start) {
+                        rangeCell = `<span class="range-cell"><i class="fas fa-calendar-days"></i>${formatDateOnly(r.period_start)} → ${formatDateOnly(r.period_end)}</span>`;
+                    }
+                    const patientCell = r.patient_id
+                        ? `<div class="patient-cell">
+                                <div class="avatar-circle">${initials(patientName)}</div>
+                                <div>
+                                    <div class="patient-cell-name">${patientName}</div>
+                                    <div class="patient-cell-id">${r.patient_id}</div>
+                                </div>
+                           </div>`
+                        : `<div class="patient-cell">
+                                <div class="avatar-circle dept-avatar"><i class="fas fa-building"></i></div>
+                                <div>
+                                    <div class="patient-cell-name">Department</div>
+                                    <div class="patient-cell-id">All patients</div>
+                                </div>
+                           </div>`;
+                    return `
+                    <tr>
+                        <td data-label="Patient">${patientCell}</td>
+                        <td data-label="Session / Range">${rangeCell}</td>
+                        <td data-label="Type"><span class="status-badge ${typeBadgeClass(r.report_type)}">${typeLabel(r.report_type)}</span></td>
+                        <td data-label="Generated By"><span class="generated-by-cell"><i class="fas fa-user"></i>${r.generated_by ?? '-'}</span></td>
+                        <td data-label="Created">${formatDate(r.created_at)}</td>
+                        <td data-label="" class="row-actions">
+                            <button class="btn-icon" title="Preview" onclick="previewReport('${r.id}')"><i class="fas fa-eye"></i></button>
+                            <a class="btn-icon" title="Download" href="/api/reports/${r.id}/download"><i class="fas fa-download"></i></a>
+                            <button class="btn-icon btn-icon-danger" title="Delete" onclick="deleteReport('${r.id}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+                }).join('');
+            }
+            updatePagination();
+        } catch (e) {
+            tbody.innerHTML = `<tr class="no-hover"><td colspan="6">
+                <div class="empty-illustration is-error">
+                    ${emptyErrorSVG()}
+                    <span class="empty-title">Couldn't load reports</span>
+                    <button class="retry-btn" onclick="reloadReports(_page)"><i class="fas fa-rotate-right"></i> Retry</button>
+                </div>
+            </td></tr>`;
+            document.getElementById('reportCountChip').textContent = 'Error loading';
+        }
+    }
+
+    function updatePagination() {
+        const start = _total ? (_page - 1) * _pageSize + 1 : 0;
+        const end = Math.min(_page * _pageSize, _total);
+        document.getElementById('paginationInfo').textContent = `Showing ${start}-${end} of ${_total}`;
+        document.getElementById('prevPageBtn').disabled = _page <= 1;
+        document.getElementById('nextPageBtn').disabled = end >= _total;
+        document.getElementById('reportCountChip').textContent = `${_total} report${_total === 1 ? '' : 's'}`;
+    }
+
+    function changePage(delta) {
+        const next = _page + delta;
+        if (next < 1) return;
+        reloadReports(next);
+    }
+
+    function formatDate(iso) {
+        if (!iso) return '-';
+        const d = new Date(iso);
+        return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    }
+
+    function formatDateOnly(iso) {
+        if (!iso) return '-';
+        return new Date(iso).toLocaleDateString();
+    }
+
+    function showGenerateAlert(message) {
+        const alertBox = document.getElementById('generateAlert');
+        document.getElementById('generateAlertText').textContent = message;
+        alertBox.classList.add('show');
+    }
+
+    function hideGenerateAlert() {
+        document.getElementById('generateAlert').classList.remove('show');
+    }
+
+    async function openGenerateModal(preselectSessionId) {
+        document.getElementById('generateModal').style.display = 'flex';
+        hideGenerateAlert();
+        document.getElementById('reportTypeSelect').value = 'session';
+        switchGenerateTab('session');
+        await loadAllPatients(); // needed so the session list below can show patient names, not raw IDs
+        const sel = document.getElementById('g_session');
+        sel.innerHTML = '<option value="">Loading sessions...</option>';
+        const sessionOptionLabel = (s) =>
+            `#${s.id} - ${_patientNameMap[s.patient_id] || s.patient_id} - ${s.exercise_name}`;
+        try {
+            // Sorted by end_time (when the session actually finished), not
+            // created_at (when it was set up) — a session created early but
+            // completed late otherwise sinks below sessions completed sooner,
+            // and the most recently finished session no longer lands on top.
+            const data = await (await fetch('/api/sessions?status=completed&page_size=50&sort_by=end_time&sort_dir=desc')).json();
+            let items = data.items || [];
+
+            // If we were asked to preselect a specific session (arrived here
+            // via "View Analytics" from a session page) but it isn't in this
+            // page of 50, fetch it directly and prepend it. Without this, the
+            // dropdown silently falls back to "Select session..." and it's
+            // easy to generate a report for the wrong session instead of the
+            // one that was actually clicked.
+            if (preselectSessionId && !items.some(s => s.id === preselectSessionId)) {
+                try {
+                    const one = await (await fetch(`/api/sessions/${encodeURIComponent(preselectSessionId)}`)).json();
+                    if (one && one.id) items = [one, ...items];
+                } catch (e) { /* fall through — option just won't exist below */ }
+            }
+
+            if (!items.length) {
+                sel.innerHTML = '<option value="">No completed sessions found</option>';
+                return;
+            }
+            sel.innerHTML = '<option value="">Select session...</option>' + items.map(s =>
+                `<option value="${s.id}">${sessionOptionLabel(s)}</option>`
+            ).join('');
+            if (preselectSessionId && [...sel.options].some(o => o.value === preselectSessionId)) {
+                sel.value = preselectSessionId;
+            }
+        } catch (e) {
+            sel.innerHTML = '<option value="">Failed to load sessions</option>';
+        }
+        if (!document.getElementById('comparativePeriods').children.length) {
+            addPeriodRow(); addPeriodRow();
+        }
+    }
+
+    function closeGenerateModal() {
+        document.getElementById('generateModal').style.display = 'none';
+        hideGenerateAlert();
+    }
+
+    // ------------------------------------------------------------
+    // Report-type panel switching
+    // ------------------------------------------------------------
+    const REPORT_PANELS = ['sessionPanel', 'rangePanel', 'monthlyPanel', 'comparativePanel', 'adminPanel'];
+    function switchGenerateTab(tab) {
+        const panelId = { session: 'sessionPanel', range: 'rangePanel', monthly: 'monthlyPanel',
+                           comparative: 'comparativePanel', admin: 'adminPanel' }[tab];
+        REPORT_PANELS.forEach(id => document.getElementById(id).style.display = (id === panelId ? 'block' : 'none'));
+        document.getElementById('reportTypeSelect').value = tab;
+        hideGenerateAlert();
+    }
+
+    // r_patient / m_patient / c_patient all share the same #patientsDatalist
+    // (loaded once via loadAllPatients), so no separate per-field loader is needed.
+
+    function toDateInputValue(d) {
+        return d.toISOString().slice(0, 10);
+    }
+
+    function applyRangePreset(preset) {
+        const today = new Date();
+        let start;
+        if (preset === 'week') {
+            start = new Date(today);
+            start.setDate(today.getDate() - today.getDay()); // back to this week's Sunday
+        } else if (preset === 'month') {
+            start = new Date(today.getFullYear(), today.getMonth(), 1);
+        } else {
+            start = new Date(today);
+            start.setDate(today.getDate() - 30);
+        }
+        document.getElementById('r_start').value = toDateInputValue(start);
+        document.getElementById('r_end').value = toDateInputValue(today);
+
+        document.querySelectorAll('#presetRow .filter-btn').forEach(b =>
+            b.classList.toggle('active', b.dataset.preset === preset));
+    }
+
+    function clearPresetHighlight() {
+        document.querySelectorAll('#presetRow .filter-btn').forEach(b => b.classList.remove('active'));
+    }
+
+    function applyAdminPreset(preset) {
+        const today = new Date();
+        let start, end;
+        if (preset === 'month') {
+            start = new Date(today.getFullYear(), today.getMonth(), 1);
+            end = today;
+        } else if (preset === 'lastmonth') {
+            start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            end = new Date(today.getFullYear(), today.getMonth(), 0);
+        } else {
+            const qStartMonth = Math.floor(today.getMonth() / 3) * 3;
+            start = new Date(today.getFullYear(), qStartMonth, 1);
+            end = today;
+        }
+        document.getElementById('adm_start').value = toDateInputValue(start);
+        document.getElementById('adm_end').value = toDateInputValue(end);
+        document.querySelectorAll('#adminPresetRow .filter-btn').forEach(b =>
+            b.classList.toggle('active', b.dataset.preset === preset));
+    }
+
+    function clearAdminPresetHighlight() {
+        document.querySelectorAll('#adminPresetRow .filter-btn').forEach(b => b.classList.remove('active'));
+    }
+
+    // ------------------------------------------------------------
+    // Comparative report — dynamic period rows
+    // ------------------------------------------------------------
+    let _periodRowSeq = 0;
+    function addPeriodRow() {
+        _periodRowSeq += 1;
+        const rowId = `periodRow${_periodRowSeq}`;
+        const wrap = document.createElement('div');
+        wrap.id = rowId;
+        wrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px;';
+        wrap.innerHTML = `
+            <div class="form-group" style="margin:0;">
+                <label class="caption">Label</label>
+                <input type="text" class="form-input period-label" placeholder="e.g. May 2026">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label class="caption">Start</label>
+                <input type="date" class="form-input period-start">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label class="caption">End</label>
+                <input type="date" class="form-input period-end">
+            </div>
+            <button type="button" class="btn-icon" title="Remove period" onclick="document.getElementById('${rowId}').remove()"><i class="fas fa-trash"></i></button>
+        `;
+        document.getElementById('comparativePeriods').appendChild(wrap);
+    }
+
+    function collectPeriods() {
+        return [...document.querySelectorAll('#comparativePeriods > div')].map(row => ({
+            label: row.querySelector('.period-label').value.trim(),
+            start_date: row.querySelector('.period-start').value,
+            end_date: row.querySelector('.period-end').value,
+        }));
+    }
+
+    let _previewReportId = null;
+    function previewReport(reportId) {
+        _previewReportId = reportId;
+        document.getElementById('previewFrame').src = `/api/reports/${reportId}/preview`;
+        document.getElementById('previewDownloadBtn').href = `/api/reports/${reportId}/download`;
+        document.getElementById('previewModal').style.display = 'flex';
+    }
+
+    function closePreviewModal() {
+        document.getElementById('previewModal').style.display = 'none';
+        document.getElementById('previewFrame').src = '';
+    }
+
+    async function deleteReport(reportId) {
+        if (!confirm('Delete this report? This cannot be undone.')) return;
+        try {
+            const res = await fetch(`/api/reports/${reportId}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Failed to delete report');
+            }
+            if (_previewReportId === reportId) closePreviewModal();
+            reloadReports(_page);
+        } catch (e) {
+            alert(e.message || 'Failed to delete report.');
+        }
+    }
+
+    function setGenerateBtnLoading(isLoading, loadingText) {
+        const btn = document.getElementById('generateBtn');
+        const label = document.getElementById('generateBtnLabel');
+        btn.disabled = isLoading;
+        label.innerHTML = isLoading ? `<span class="btn-spinner"></span>${loadingText}` : 'Generate';
+    }
+
+    async function generateReport() {
+        const type = document.getElementById('reportTypeSelect').value;
+        if (type === 'range') return generateRangeReport();
+        if (type === 'monthly') return generateMonthlyReport();
+        if (type === 'comparative') return generateComparativeReport();
+        if (type === 'admin') return generateAdminReport();
+
+        hideGenerateAlert();
+        const sessionId = document.getElementById('g_session').value;
+        if (!sessionId) { showGenerateAlert('Select a completed session.'); return; }
+        setGenerateBtnLoading(true, 'Generating...');
+        try {
+            const res = await fetch(`/api/reports/generate/${sessionId}`, {method: 'POST'});
+            if (!res.ok) throw new Error('Failed to generate report');
+            closeGenerateModal();
+            reloadReports(1);
+        } catch (e) {
+            showGenerateAlert(e.message || 'Failed to generate report.');
+        } finally {
+            setGenerateBtnLoading(false);
+        }
+    }
+
+    async function generateRangeReport() {
+        hideGenerateAlert();
+        const patientId = getSelectedPatientId('r_patient');
+        const start = document.getElementById('r_start').value;
+        const end = document.getElementById('r_end').value;
+        if (!patientId || !start || !end) { showGenerateAlert('Patient, Start Date and End Date are required.'); return; }
+        if (start > end) { showGenerateAlert('Start Date must be before End Date.'); return; }
+        setGenerateBtnLoading(true, 'Generating...');
+        try {
+            const params = new URLSearchParams({ patient_id: patientId, start_date: start, end_date: end });
+            const res = await fetch(`/api/reports/generate-range?${params.toString()}`, {method: 'POST'});
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Failed to generate range report');
+            }
+            closeGenerateModal();
+            reloadReports(1);
+        } catch (e) {
+            showGenerateAlert(e.message || 'Failed to generate range report.');
+        } finally {
+            setGenerateBtnLoading(false);
+        }
+    }
+
+    async function generateMonthlyReport() {
+        hideGenerateAlert();
+        const patientId = getSelectedPatientId('m_patient');
+        const month = document.getElementById('m_month').value; // "YYYY-MM"
+        if (!patientId || !month) { showGenerateAlert('Patient and Month are required.'); return; }
+        setGenerateBtnLoading(true, 'Generating...');
+        try {
+            const params = new URLSearchParams({ patient_id: patientId, month });
+            const res = await fetch(`/api/reports/generate-monthly?${params.toString()}`, {method: 'POST'});
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Failed to generate monthly report');
+            }
+            closeGenerateModal();
+            reloadReports(1);
+        } catch (e) {
+            showGenerateAlert(e.message || 'Failed to generate monthly report.');
+        } finally {
+            setGenerateBtnLoading(false);
+        }
+    }
+
+    async function generateComparativeReport() {
+        hideGenerateAlert();
+        const patientId = getSelectedPatientId('c_patient');
+        const periods = collectPeriods();
+        if (!patientId) { showGenerateAlert('Select a patient.'); return; }
+        if (periods.length < 2) { showGenerateAlert('Add at least 2 periods to compare.'); return; }
+        for (const p of periods) {
+            if (!p.label || !p.start_date || !p.end_date) { showGenerateAlert('Every period needs a label, start date and end date.'); return; }
+            if (p.start_date > p.end_date) { showGenerateAlert(`Period "${p.label}": start date must be before end date.`); return; }
+        }
+        setGenerateBtnLoading(true, 'Generating...');
+        try {
+            const res = await fetch('/api/reports/generate-comparative', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id: patientId, periods }),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Failed to generate comparative report');
+            }
+            closeGenerateModal();
+            reloadReports(1);
+        } catch (e) {
+            showGenerateAlert(e.message || 'Failed to generate comparative report.');
+        } finally {
+            setGenerateBtnLoading(false);
+        }
+    }
+
+    async function generateAdminReport() {
+        hideGenerateAlert();
+        const start = document.getElementById('adm_start').value;
+        const end = document.getElementById('adm_end').value;
+        if (!start || !end) { showGenerateAlert('Start Date and End Date are required.'); return; }
+        if (start > end) { showGenerateAlert('Start Date must be before End Date.'); return; }
+        setGenerateBtnLoading(true, 'Generating...');
+        try {
+            const params = new URLSearchParams({ start_date: start, end_date: end });
+            const res = await fetch(`/api/reports/generate-admin?${params.toString()}`, {method: 'POST'});
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Failed to generate administrative report');
+            }
+            closeGenerateModal();
+            reloadReports(1);
+        } catch (e) {
+            showGenerateAlert(e.message || 'Failed to generate administrative report.');
+        } finally {
+            setGenerateBtnLoading(false);
+        }
+    }
+
+    </script>
+</body>
+</html>

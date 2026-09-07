@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - MedNova VR Rehab</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=8">
+    <link rel="stylesheet" href="/static/css/auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="/static/vendor/chart.umd.min.js"></script>
+    <script src="/static/js/chart-theme.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img class="logo-icon" src="/assets/logo.png?v=2" alt="MedNova logo" width="40" height="40">
+                    <div class="logo-text">
+                        <span class="logo-title">MedNova</span>
+                        <span class="logo-subtitle">VR Rehab Platform</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item active"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+                <a href="/patients"  class="nav-item"><i class="fas fa-users"></i><span>Patients</span></a>
+                <a href="/session"   class="nav-item"><i class="fas fa-vr-cardboard"></i><span>Sessions</span></a>
+                <a href="/reports"   class="nav-item"><i class="fas fa-file-alt"></i><span>Reports</span></a>
+                <a href="/analytics" class="nav-item"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
+                <a href="/settings"   class="nav-item"><i class="fas fa-gear"></i><span>Settings</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="status-dot" id="systemDot"></span>
+                    <span id="systemStatusText">Checking...</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+                    <div class="breadcrumb">
+                        <span>Home</span>
+                        <i class="fas fa-chevron-right"></i>
+                        <span class="active">Dashboard</span>
+                    </div>
+                    <div class="top-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="globalSearch" placeholder="Search patients, sessions...">
+                    </div>
+                </div>
+                <div class="top-bar-right">
+                    <div class="status-badge" id="vrBadge">
+                        <span class="badge-dot" id="vrBadgeDot"></span>
+                        <span id="vrBadgeText">Checking VR...</span>
+                    </div>
+                    <div class="status-badge" id="deviceHealthBadge" style="display:none;" title="Avg VR headset FPS / network latency, last 7 days">
+                        <span class="badge-dot online"></span>
+                        <span id="deviceHealthText"></span>
+                    </div>
+                    <span class="caption" id="clockText"></span>
+                    <div class="notif-wrap">
+                        <button class="icon-btn" id="notifBtn" title="Notifications"><i class="fas fa-bell"></i><span class="dot-badge" id="notifDot"></span></button>
+                        <div class="notif-panel" id="notifPanel">
+                            <div class="notif-panel-header">Recent Activity</div>
+                            <div class="notif-panel-body" id="notifList"><div class="notif-empty">Loading...</div></div>
+                        </div>
+                    </div>
+                    <div class="topbar-avatar"><i class="fas fa-user-doctor"></i></div>
+                    <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-area" style="display:flex;flex-direction:column;gap:24px;">
+
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <h1 class="page-title">Dashboard</h1>
+                        <p class="header-subtitle">Live overview of sessions, VR devices and patient progress</p>
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <a href="/session" class="btn-primary"><i class="fas fa-play"></i> Start Session</a>
+                        <a href="/patients" class="btn-secondary"><i class="fas fa-user-plus"></i> Add Patient</a>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid" id="dashboardStats"></div>
+
+                <!-- Score Gauges -->
+                <div class="gauge-row">
+                    <div class="chart-container gauge-card animate-slide-up">
+                        <h3 class="card-title" style="align-self:flex-start;">Completion Rate</h3>
+                        <div class="gauge-canvas-wrap"><canvas id="completionGauge"></canvas></div>
+                        <span class="gauge-caption">Sessions finished vs started</span>
+                    </div>
+                    <div class="chart-container gauge-card animate-slide-up">
+                        <h3 class="card-title" style="align-self:flex-start;">Avg Accuracy (30d)</h3>
+                        <div class="gauge-canvas-wrap"><canvas id="accuracyGauge"></canvas></div>
+                        <span class="gauge-caption">Mean exercise accuracy this month</span>
+                    </div>
+                    <div class="chart-container gauge-card animate-slide-up">
+                        <h3 class="card-title" style="align-self:flex-start;">Hand Usage (30d)</h3>
+                        <div class="hand-usage-dual">
+                            <div class="hand-usage-item">
+                                <div class="gauge-canvas-wrap-sm"><canvas id="rightHandGauge"></canvas></div>
+                                <span class="hand-usage-tag right"><i class="fas fa-circle"></i>Right</span>
+                            </div>
+                            <div class="hand-usage-item">
+                                <div class="gauge-canvas-wrap-sm"><canvas id="leftHandGauge"></canvas></div>
+                                <span class="hand-usage-tag left"><i class="fas fa-circle"></i>Left</span>
+                            </div>
+                        </div>
+                        <span class="gauge-caption" id="handUsageCaption">Avg right vs left hand activity</span>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="charts-row">
+                    <div class="recommendations animate-slide-up" style="padding:20px;">
+                        <div class="section-header"><h3 class="card-title">Recent Activity</h3></div>
+                        <div class="activity-list" id="recentActivity">
+                            <div class="activity-empty">Loading activity...</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+    let _charts = {};
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        document.getElementById('menuToggle')?.addEventListener('click', () =>
+            document.querySelector('.sidebar').classList.toggle('open'));
+
+        tickClock();
+        setInterval(tickClock, 1000);
+
+        await Promise.all([
+            checkHealth(),
+            checkDeviceHealth(),
+            loadOverview(),
+            loadRecentActivity(),
+            loadGauges(),
+            loadBilateralHandUsage(),
+        ]);
+
+        connectLiveUpdates();
+    });
+
+    // ------------------------------------------------------------
+    // Live updates via /ws/dashboard — backend pushes a message
+    // whenever a VR session connects or ends (see routers/ws.py).
+    // On either event we just re-pull the same data the page loads
+    // on refresh, so the dashboard stays current without the user
+    // hitting F5. Auto-reconnects with backoff if the socket drops
+    // (e.g. tunnel restart) so the tab doesn't need a manual reload.
+    // ------------------------------------------------------------
+    let _liveSocket = null;
+    let _liveReconnectDelay = 2000;
+
+    function connectLiveUpdates() {
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        _liveSocket = new WebSocket(`${proto}://${location.host}/ws/dashboard`);
+
+        _liveSocket.onopen = () => {
+            _liveReconnectDelay = 2000; // reset backoff once connected
+            console.log('Live dashboard updates connected.');
+        };
+
+        _liveSocket.onmessage = (event) => {
+            let msg;
+            try {
+                msg = JSON.parse(event.data);
+            } catch {
+                return;
+            }
+
+            if (msg.type === 'session_connected' || msg.type === 'session_ended') {
+                // Refresh everything that could have changed. These are
+                // lightweight fetches, safe to run together.
+                checkHealth();
+                loadOverview();
+                loadRecentSessions();
+                loadRecentActivity();
+                if (msg.type === 'session_ended') {
+                    loadGauges();
+                    loadBilateralHandUsage();
+                }
+            }
+        };
+
+        _liveSocket.onclose = () => {
+            console.log(`Live dashboard updates disconnected. Retrying in ${_liveReconnectDelay / 1000}s...`);
+            setTimeout(connectLiveUpdates, _liveReconnectDelay);
+            _liveReconnectDelay = Math.min(_liveReconnectDelay * 2, 30000); // cap at 30s
+        };
+
+        _liveSocket.onerror = () => {
+            _liveSocket.close();
+        };
+    }
+
+    function tickClock() {
+        const el = document.getElementById('clockText');
+        if (el) el.textContent = new Date().toLocaleString();
+    }
+
+    async function checkHealth() {
+        try {
+            const d = await (await fetch('/api/health')).json();
+            const online = d.status === 'healthy';
+            document.getElementById('systemDot').className = 'status-dot ' + (online ? 'online' : 'offline');
+            document.getElementById('systemStatusText').textContent = online ? 'System Online' : 'System Error';
+
+            const vrOn = d.vr_connections > 0;
+            document.getElementById('vrBadgeDot').className = 'badge-dot ' + (vrOn ? 'online' : 'offline');
+            document.getElementById('vrBadgeText').textContent =
+                vrOn ? `${d.vr_connections} VR device(s) live` : 'No VR devices connected';
+        } catch {
+            document.getElementById('systemStatusText').textContent = 'Offline';
+        }
+    }
+
+    // Device technical health (FPS / latency) — badge only appears once the
+    // VR headset has actually reported telemetry; hidden otherwise so we
+    // don't show a "0 FPS" badge before that integration is live.
+    async function checkDeviceHealth() {
+        try {
+            const o = await (await fetch('/api/dashboard/overview')).json();
+            const badge = document.getElementById('deviceHealthBadge');
+            if (o.avg_fps === null && o.avg_latency_ms === null) {
+                badge.style.display = 'none';
+                return;
+            }
+            const fpsText = o.avg_fps !== null ? `${o.avg_fps} FPS` : '';
+            const latencyText = o.avg_latency_ms !== null ? `${o.avg_latency_ms}ms` : '';
+            document.getElementById('deviceHealthText').textContent =
+                [fpsText, latencyText].filter(Boolean).join(' · ');
+            badge.style.display = 'flex';
+        } catch (e) { console.error('checkDeviceHealth:', e); }
+    }
+
+    async function loadOverview() {
+        try {
+            const o = await (await fetch('/api/dashboard/overview')).json();
+            const mins = Math.floor((o.avg_session_duration_seconds || 0) / 60);
+            const secs = Math.round((o.avg_session_duration_seconds || 0) % 60);
+
+            // First entry is featured as the gradient "hero" card — Completion
+            // Rate is the single number a therapist glances at first, so it
+            // gets the visual spotlight instead of sitting flat in the grid.
+            const stats = [
+                { icon: 'fa-check-circle', label: 'Completion Rate · last 30 days', value: o.completion_rate + '%', hero: true },
+                { icon: 'fa-calendar-check', label: "Today's Sessions", value: o.todays_sessions, cls: 'blue' },
+                { icon: 'fa-vr-cardboard',   label: 'Connected VR Devices', value: o.connected_vr_devices, cls: 'purple' },
+                { icon: 'fa-user-injured',   label: 'Connected Patients', value: o.connected_patients, cls: 'green' },
+                { icon: 'fa-hourglass-half', label: 'Pending Sessions', value: o.upcoming_sessions, cls: 'orange' },
+                { icon: 'fa-file-alt',       label: 'Reports Generated', value: o.reports_generated, cls: 'blue' },
+                { icon: 'fa-users',          label: 'Total Patients', value: o.total_patients, cls: 'purple' },
+                { icon: 'fa-clock',          label: 'Avg Session Length', value: `${mins}m ${secs}s`, cls: 'orange' },
+                { icon: 'fa-triangle-exclamation', label: 'Avg Errors/Session (30d)',
+                  value: o.avg_error_count !== null ? o.avg_error_count : '-', cls: 'orange' },
+                { icon: 'fa-stopwatch',      label: 'Avg Reaction Time (30d)',
+                  value: o.avg_reaction_time_ms !== null ? `${o.avg_reaction_time_ms}ms` : '-', cls: 'blue' },
+            ];
+
+            document.getElementById('dashboardStats').innerHTML = stats.map(s => s.hero ? `
+                <div class="stat-card stat-hero animate-slide-up">
+                    <div class="stat-hero-illustration">${heroIllustrationSVG()}</div>
+                    <div class="stat-content">
+                        <div class="stat-icon"><i class="fas ${s.icon}"></i></div>
+                    </div>
+                    <span class="stat-value">${s.value}</span>
+                    <span class="stat-label">${s.label}</span>
+                </div>
+            ` : `
+                <div class="stat-card variant-${s.cls} animate-slide-up">
+                    <div class="stat-content">
+                        <div class="stat-icon ${s.cls}"><i class="fas ${s.icon}"></i></div>
+                    </div>
+                    <span class="stat-value">${s.value}</span>
+                    <span class="stat-label">${s.label}</span>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error('loadOverview:', e);
+            document.getElementById('dashboardStats').innerHTML = `
+                <div class="empty-illustration is-error" style="grid-column:1/-1;">
+                    ${emptyErrorSVG()}
+                    <span class="empty-title">Couldn't load dashboard overview</span>
+                    <span class="empty-sub">Check your connection or the backend service, then try again.</span>
+                    <button class="retry-btn" onclick="loadOverview()">Retry</button>
+                </div>`;
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Inline SVG illustrations — kept as small line-art snippets (not
+    // external image files) so they inherit the app's CSS variables
+    // and need zero extra network requests / asset folders.
+    // ------------------------------------------------------------
+    function heroIllustrationSVG() {
+        return `<svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="60" cy="60" r="56" stroke="#fff" stroke-width="3"/>
+            <circle cx="60" cy="60" r="38" stroke="#fff" stroke-width="3"/>
+            <path d="M40 61 L54 75 L82 43" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`;
+    }
+
+    function emptyActivitySVG() {
+        return `<svg viewBox="0 0 100 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="14" y="26" width="66" height="48" rx="9" fill="var(--primary-tint)"/>
+            <rect x="25" y="40" width="44" height="6" rx="3" fill="var(--primary)"/>
+            <rect x="25" y="52" width="30" height="6" rx="3" fill="var(--primary)" opacity="0.5"/>
+            <circle cx="74" cy="20" r="13" fill="var(--secondary-tint)"/>
+            <path d="M68.5 20 l3.7 3.7 l7-7.4" stroke="var(--secondary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`;
+    }
+
+    function emptyErrorSVG() {
+        return `<svg viewBox="0 0 100 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="42" r="34" fill="var(--danger-tint)"/>
+            <rect x="46" y="26" width="8" height="22" rx="4" fill="var(--danger)"/>
+            <circle cx="50" cy="56" r="4.5" fill="var(--danger)"/>
+        </svg>`;
+    }
+
+    function formatDate(iso) {
+        if (!iso) return '-';
+        const d = new Date(iso);
+        return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    }
+
+    async function loadRecentActivity() {
+        const el = document.getElementById('recentActivity');
+        try {
+            const rows = await (await fetch('/api/dashboard/recent-activity?limit=10')).json();
+            if (!rows.length) {
+                el.innerHTML = `<div class="empty-illustration">${emptyActivitySVG()}<span class="empty-title">No recent activity yet</span><span class="empty-sub">Activity shows up here once sessions start.</span></div>`;
+                return;
+            }
+            el.innerHTML = rows.map(r => `
+                <div class="activity-item">
+                    <div class="activity-icon"><i class="fas fa-bolt"></i></div>
+                    <div class="activity-details">
+                        <div class="activity-title">${escapeHtml(r.action)} ${escapeHtml(r.entity_type)}${r.entity_id ? ' #' + escapeHtml(r.entity_id) : ''}</div>
+                        <div class="activity-meta">${formatDate(r.timestamp)}</div>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            el.innerHTML = `<div class="empty-illustration is-error">${emptyErrorSVG()}<span class="empty-title">Couldn't load activity</span><button class="retry-btn" onclick="loadRecentActivity()">Retry</button></div>`;
+        }
+    }
+
+    // Renamed from loadTrendCharts - the Accuracy/ROM/Exercise-Distribution
+    // charts it used to draw were removed from this page (they're org-wide
+    // duplicates of what Analytics already shows per-patient, which is
+    // more useful). Still fetches accuracy-trend + overview because the
+    // Completion Rate and Avg Accuracy gauges are computed from that same
+    // data - only the chart-drawing calls were dropped.
+    async function loadGauges() {
+        try {
+            const [acc, overview] = await Promise.all([
+                (await fetch('/api/analytics/accuracy-trend?days=30')).json(),
+                (await fetch('/api/dashboard/overview')).json(),
+            ]);
+
+            const { Theme, buildGauge } = window.MedNovaCharts;
+
+            buildGauge('completionGauge', overview.completion_rate ?? 0, {
+                color: Theme.primary,
+            });
+
+            const avgAcc = acc.length ? acc.reduce((s, r) => s + (r.avg_accuracy || 0), 0) / acc.length : 0;
+            buildGauge('accuracyGauge', Math.round(avgAcc), {
+                color: Theme.teal,
+            });
+        } catch (e) {
+            console.error('loadGauges:', e);
+        }
+    }
+
+    // Bilateral hand usage gauge — same graceful empty-state pattern as
+    // analytics.html: shows 0 + explanatory caption until sessions start
+    // reporting hand_side (glove/VR integration dependent).
+    async function loadBilateralHandUsage() {
+        try {
+            const o = await (await fetch('/api/analytics/bilateral-hand-usage?days=30')).json();
+            const caption = document.getElementById('handUsageCaption');
+            const { Theme, buildGauge } = window.MedNovaCharts;
+            if (o.sessions_counted === 0 || o.right_avg_pct === null) {
+                buildGauge('rightHandGauge', 0, { color: Theme.primary });
+                buildGauge('leftHandGauge', 0, { color: Theme.violet });
+                caption.textContent = 'No hand-side data reported yet';
+                return;
+            }
+            buildGauge('rightHandGauge', o.right_avg_pct, { color: Theme.primary });
+            buildGauge('leftHandGauge', o.left_avg_pct, { color: Theme.violet });
+            caption.textContent = `Right ${o.right_avg_pct}% / Left ${o.left_avg_pct}% · ${o.sessions_counted} sessions`;
+        } catch (e) { console.error('loadBilateralHandUsage:', e); }
+    }
+
+    </script>
+</body>
+</html>

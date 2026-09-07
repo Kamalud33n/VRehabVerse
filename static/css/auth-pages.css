@@ -1,0 +1,145 @@
+/* Public / Auth pages - login, register, forgot/reset password.
+   Re-themed to match the landing page (index.html) brand system:
+   ink/blue/sand palette + Manrope/Inter/IBM Plex Mono fonts.
+   Include style.css AND landing.css BEFORE this file — this file
+   consumes both the neutral --primary/--surface tokens (for form
+   inputs, alerts, status pills) and the --mn-* brand tokens (for
+   color/typography), so the auth pages read as the same brand
+   moment as index.html rather than a re-skinned dashboard. */
+
+.auth-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: stretch;
+    font-family: var(--f-body, 'Inter', sans-serif);
+}
+
+.auth-shell-brand {
+    flex: 1.1;
+    background: var(--mn-paper);
+    color: var(--mn-ink);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px;
+    position: relative;
+    overflow: hidden;
+    border-right: 1px solid var(--mn-sand-line);
+}
+
+.auth-shell-brand::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(600px 400px at 90% 10%, rgba(27, 132, 255, 0.08), transparent 60%),
+        radial-gradient(500px 400px at 10% 90%, rgba(27, 132, 255, 0.06), transparent 60%);
+}
+
+.auth-shell-brand > * { position: relative; z-index: 1; }
+
+.auth-brand-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 48px; }
+.auth-brand-logo img { width: 44px; height: 44px; border-radius: 10px; background: #fff; padding: 4px; border: 1px solid var(--mn-sand-line); }
+.auth-brand-logo span { font-family: var(--f-display, 'Manrope', sans-serif); font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; color: var(--mn-ink); }
+
+.auth-brand-headline {
+    font-family: var(--f-display, 'Manrope', sans-serif);
+    font-size: 2.1rem; font-weight: 800; line-height: 1.22;
+    letter-spacing: -0.02em; margin-bottom: 16px; max-width: 480px;
+    color: var(--mn-ink);
+}
+.auth-brand-sub { font-size: 1rem; color: #52616A; max-width: 440px; line-height: 1.6; margin-bottom: 40px; }
+
+.auth-brand-features { display: flex; flex-direction: column; gap: 16px; }
+.auth-brand-feature { display: flex; align-items: center; gap: 12px; font-size: 0.92rem; color: var(--mn-ink); }
+.auth-brand-feature i {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: rgba(27, 132, 255, 0.12);
+    color: var(--mn-blue);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+
+.auth-shell-form {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    background: var(--mn-sand);
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 440px;
+    background: var(--mn-paper);
+    border-radius: 22px;
+    box-shadow: 0 24px 48px -22px rgba(10, 26, 38, 0.22);
+    border: 1px solid var(--mn-sand-line);
+    padding: 40px;
+}
+
+.auth-card.wide { max-width: 620px; }
+
+.auth-card-header { margin-bottom: 28px; }
+.auth-card-header h1 {
+    font-family: var(--f-display, 'Manrope', sans-serif);
+    font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em;
+    margin-bottom: 6px; color: var(--mn-ink);
+}
+.auth-card-header p { color: #6B7A81; font-size: 0.9rem; }
+
+.auth-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.auth-form-row.three { grid-template-columns: 110px 1fr; }
+
+.auth-phone-group { display: grid; grid-template-columns: 130px 1fr; gap: 10px; }
+
+.auth-shell .form-input:focus, .auth-shell select:focus, .auth-shell input:focus {
+    outline: none;
+    border-color: var(--mn-blue);
+    box-shadow: 0 0 0 4px rgba(27, 132, 255, 0.18);
+}
+
+.auth-submit-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: none;
+    background: var(--mn-ink);
+    color: #fff;
+    font-family: var(--f-body, 'Inter', sans-serif);
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 0 10px 26px -10px rgba(10, 26, 38, 0.45);
+    transition: transform 0.25s ease, background 0.25s ease;
+}
+.auth-submit-btn:hover { background: var(--mn-blue); transform: translateY(-2px); }
+.auth-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.auth-card-footer { text-align: center; margin-top: 22px; font-size: 0.85rem; color: #6B7A81; }
+.auth-card-footer a { color: var(--mn-blue); font-weight: 700; }
+
+.auth-alert {
+    display: none;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    margin-bottom: 18px;
+}
+.auth-alert.error { display: block; background: var(--danger-tint); color: var(--danger); }
+.auth-alert.success { display: block; background: var(--success-tint); color: #2F855A; }
+
+.auth-status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: var(--radius-pill, 999px);
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+}
+.auth-status-pill.pending  { background: var(--warning-tint); color: var(--warning); }
+.auth-status-pill.approved { background: var(--success-tint); color: #2F855A; }
+.auth-status-pill.rejected { background: var(--danger-tint);  color: var(--danger); }
+
+@media (max-width: 980px) {
+    .auth-shell-brand { display: none; }
+}

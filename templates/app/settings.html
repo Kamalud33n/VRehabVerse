@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings — MedNova VR Rehab</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=10">
+    <link rel="stylesheet" href="/static/css/auth.css">
+    <link rel="stylesheet" href="/static/css/auth-pages.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .settings-accordion { display: flex; flex-direction: column; gap: 14px; max-width: 780px; }
+        .accordion-item {
+            background: var(--surface); border: 1px solid var(--card-border);
+            border-radius: var(--radius-card); box-shadow: var(--shadow-card);
+            overflow: hidden; transition: box-shadow 0.3s var(--ease);
+        }
+        .accordion-item.open { box-shadow: var(--shadow-hover); }
+        .accordion-header {
+            display: flex; align-items: center; gap: 12px;
+            padding: 18px 22px; cursor: pointer; user-select: none;
+            background: transparent; border: none; width: 100%; text-align: left;
+        }
+        .accordion-header-icon {
+            width: 36px; height: 36px; border-radius: var(--radius-md);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            background: var(--primary-tint); color: var(--primary); font-size: 14px;
+            transition: var(--transition);
+        }
+        .accordion-header-text { flex: 1; min-width: 0; }
+        .accordion-header-title { font-size: 14.5px; font-weight: 700; color: var(--text-primary); }
+        .accordion-header-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .accordion-chevron { color: var(--text-muted); font-size: 13px; transition: transform 0.3s var(--ease); flex-shrink: 0; }
+        .accordion-item.open .accordion-chevron { transform: rotate(180deg); color: var(--primary); }
+        .accordion-item.open .accordion-header-icon { background: var(--primary); color: #fff; }
+        .accordion-header:hover .accordion-header-icon { background: var(--primary); color: #fff; }
+
+        .accordion-body { max-height: 0; overflow: hidden; transition: max-height 0.35s var(--ease); }
+        .accordion-item.open .accordion-body { max-height: 1400px; }
+        .accordion-body-inner { padding: 4px 22px 26px; border-top: 1px solid var(--border); padding-top: 20px; }
+
+        .ticket-item {
+            border: 1px solid var(--border); border-radius: var(--radius-md);
+            padding: 14px 16px; margin-bottom: 10px;
+        }
+        .ticket-item-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+        .ticket-subject { font-weight: 700; font-size: 13.5px; color: var(--text-primary); }
+        .ticket-meta { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+        .ticket-message { font-size: 13px; color: var(--text-secondary); margin-top: 8px; white-space: pre-wrap; }
+        .ticket-response {
+            margin-top: 10px; padding: 10px 12px; border-radius: var(--radius-sm);
+            background: var(--primary-tint); font-size: 12.5px; color: var(--text-primary);
+        }
+        .ticket-response b { color: var(--primary-dark); }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img class="logo-icon" src="/assets/logo.png?v=2" alt="MedNova logo" width="40" height="40">
+                    <div class="logo-text"><span class="logo-title">MedNova</span><span class="logo-subtitle">VR Rehab Platform</span></div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+                <a href="/patients"  class="nav-item"><i class="fas fa-users"></i><span>Patients</span></a>
+                <a href="/session"   class="nav-item"><i class="fas fa-vr-cardboard"></i><span>Sessions</span></a>
+                <a href="/reports"   class="nav-item"><i class="fas fa-file-alt"></i><span>Reports</span></a>
+                <a href="/analytics" class="nav-item"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
+                <a href="/settings"  class="nav-item active"><i class="fas fa-gear"></i><span>Settings</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+                    <div class="breadcrumb"><span>Home</span><i class="fas fa-chevron-right"></i><span class="active">Settings</span></div>
+                </div>
+                <div class="top-bar-right">
+                    <div class="topbar-avatar"><i class="fas fa-user-doctor"></i></div>
+                    <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <h1 class="page-title">Settings</h1>
+
+                <div class="settings-accordion">
+
+                    <!-- ================= PERSONAL DETAILS ================= -->
+                    <div class="accordion-item open" id="accordion-personal">
+                        <button class="accordion-header" onclick="toggleAccordion('personal')">
+                            <div class="accordion-header-icon"><i class="fas fa-id-card"></i></div>
+                            <div class="accordion-header-text">
+                                <div class="accordion-header-title">Personal details</div>
+                                <div class="accordion-header-sub">Name, job title, phone &amp; profile photo</div>
+                            </div>
+                            <i class="fas fa-chevron-down accordion-chevron"></i>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-body-inner">
+                                <div style="display:flex;align-items:center;gap:20px;margin-bottom:24px;">
+                                    <div style="position:relative;">
+                                        <div id="profilePicWrap" style="width:84px;height:84px;border-radius:50%;background:var(--primary-tint);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:2rem;overflow:hidden;">
+                                            <span style="font-weight:700;">?</span>
+                                        </div>
+                                        <label for="picUpload" style="position:absolute;bottom:0;right:0;width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.75rem;" title="Change photo">
+                                            <i class="fas fa-camera"></i>
+                                        </label>
+                                        <input type="file" id="picUpload" accept="image/*" style="display:none;">
+                                        <button type="button" id="picDeleteBtn" class="avatar-delete-btn" style="display:none;" title="Remove photo">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    <div>
+                                        <div id="profileName" style="font-size:1.2rem;font-weight:800;">—</div>
+                                        <div id="profileRole" class="caption">—</div>
+                                        <span class="auth-status-pill approved" id="profileStatusPill" style="margin-top:6px;display:inline-flex;"></span>
+                                    </div>
+                                </div>
+
+                                <div class="auth-form-row">
+                                    <div class="form-group"><label>Full name</label><input class="form-input editable-field" id="fullName" disabled></div>
+                                    <div class="form-group"><label>Job title</label><input class="form-input editable-field" id="jobTitle" disabled></div>
+                                </div>
+                                <div class="auth-form-row">
+                                    <div class="form-group"><label>Phone number</label>
+                                        <div class="auth-phone-group">
+                                            <input class="form-input editable-field" id="countryCode" style="text-align:center;" disabled>
+                                            <input class="form-input editable-field" id="phoneNumber" disabled>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="auth-alert success" id="personalSaveSuccess" style="margin-top:16px;"></div>
+                                <div style="margin-top:8px;display:flex;gap:10px;">
+                                    <button class="btn-secondary" id="editPersonalBtn" onclick="enterPersonalEdit()"><i class="fas fa-pen"></i> Edit</button>
+                                    <button class="btn-primary" id="savePersonalBtn" style="display:none;" onclick="savePersonal()"><i class="fas fa-save"></i> Save changes</button>
+                                    <button class="btn-secondary" id="cancelPersonalBtn" style="display:none;" onclick="cancelPersonalEdit()"><i class="fas fa-times"></i> Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ================= ACCOUNT SECURITY ================= -->
+                    <div class="accordion-item" id="accordion-security">
+                        <button class="accordion-header" onclick="toggleAccordion('security')">
+                            <div class="accordion-header-icon"><i class="fas fa-shield-halved"></i></div>
+                            <div class="accordion-header-text">
+                                <div class="accordion-header-title">Account security</div>
+                                <div class="accordion-header-sub">Email &amp; password</div>
+                            </div>
+                            <i class="fas fa-chevron-down accordion-chevron"></i>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-body-inner">
+                                <div class="auth-form-row">
+                                    <div class="form-group"><label>Email</label><input class="form-input" id="email" disabled></div>
+                                    <div class="form-group"><label>New email</label><input class="form-input" id="newEmail" placeholder="Enter new email"></div>
+                                </div>
+                                <div class="form-group"><label>Current password (to confirm email change)</label><input class="form-input" type="password" id="emailChangePassword" placeholder="••••••••"></div>
+                                <div class="auth-alert" id="emailChangeMsg" style="margin-top:2px;display:none;"></div>
+                                <button class="btn-secondary" style="margin-top:8px;" onclick="changeEmail()"><i class="fas fa-envelope"></i> Update email</button>
+
+                                <div class="auth-form-row" style="margin-top:26px;">
+                                    <div class="form-group"><label>Current password</label><input class="form-input" type="password" id="currentPassword" placeholder="••••••••"></div>
+                                    <div class="form-group"><label>New password</label><input class="form-input" type="password" id="newPassword" placeholder="Min 8 characters"></div>
+                                </div>
+                                <div class="form-group"><label>Confirm new password</label><input class="form-input" type="password" id="confirmNewPassword" placeholder="Re-enter new password"></div>
+                                <div class="auth-alert" id="passwordChangeMsg" style="margin-top:2px;display:none;"></div>
+                                <button class="btn-secondary" style="margin-top:8px;" onclick="changePassword()"><i class="fas fa-key"></i> Update password</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ================= HOSPITAL DETAILS ================= -->
+                    <div class="accordion-item" id="accordion-hospital">
+                        <button class="accordion-header" onclick="toggleAccordion('hospital')">
+                            <div class="accordion-header-icon"><i class="fas fa-hospital"></i></div>
+                            <div class="accordion-header-text">
+                                <div class="accordion-header-title">Hospital details</div>
+                                <div class="accordion-header-sub">Name, phone &amp; address</div>
+                            </div>
+                            <i class="fas fa-chevron-down accordion-chevron"></i>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-body-inner">
+                                <div class="auth-form-row">
+                                    <div class="form-group"><label>Hospital name</label><input class="form-input editable-field" id="hospitalName" disabled></div>
+                                    <div class="form-group"><label>Hospital phone</label><input class="form-input editable-field" id="hospitalPhone" disabled></div>
+                                </div>
+                                <div class="form-group"><label>Hospital address</label><input class="form-input editable-field" id="hospitalAddress" disabled></div>
+
+                                <div class="auth-alert success" id="hospitalSaveSuccess" style="margin-top:16px;"></div>
+                                <div style="margin-top:8px;display:flex;gap:10px;">
+                                    <button class="btn-secondary" id="editHospitalBtn" onclick="enterHospitalEdit()"><i class="fas fa-pen"></i> Edit</button>
+                                    <button class="btn-primary" id="saveHospitalBtn" style="display:none;" onclick="saveHospital()"><i class="fas fa-save"></i> Save changes</button>
+                                    <button class="btn-secondary" id="cancelHospitalBtn" style="display:none;" onclick="cancelHospitalEdit()"><i class="fas fa-times"></i> Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ================= SUPPORT ================= -->
+                    <div class="accordion-item" id="accordion-support">
+                        <button class="accordion-header" onclick="toggleAccordion('support')">
+                            <div class="accordion-header-icon"><i class="fas fa-headset"></i></div>
+                            <div class="accordion-header-text">
+                                <div class="accordion-header-title">Support</div>
+                                <div class="accordion-header-sub">Raise a ticket to the super admin team</div>
+                            </div>
+                            <i class="fas fa-chevron-down accordion-chevron"></i>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-body-inner">
+                                <div class="section-title" style="margin-bottom:14px;">Raise a support ticket</div>
+                                <p class="header-subtitle" style="margin-bottom:16px;">This goes directly to the MedNova super admin team for review.</p>
+                                <div class="form-group"><label>Subject</label><input class="form-input" id="ticketSubject" placeholder="Briefly describe the issue" maxlength="200"></div>
+                                <div class="form-group"><label>Message</label><textarea class="form-input" id="ticketMessage" rows="4" placeholder="Explain the issue in detail..."></textarea></div>
+                                <div class="auth-alert" id="ticketMsg" style="margin-top:2px;display:none;"></div>
+                                <button class="btn-primary" onclick="submitTicket()"><i class="fas fa-paper-plane"></i> Submit ticket</button>
+
+                                <div class="section-title" style="margin:26px 0 14px;">Your tickets</div>
+                                <div id="ticketList"><div class="activity-empty">Loading...</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/profile-picture.js"></script>
+    <script>
+        let profileData = null;
+        let ticketsLoaded = false;
+
+        // ---------------- Accordion ----------------
+        function toggleAccordion(name) {
+            const item = document.getElementById(`accordion-${name}`);
+            const isOpen = item.classList.contains('open');
+            document.querySelectorAll('.accordion-item').forEach(el => el.classList.remove('open'));
+            if (!isOpen) {
+                item.classList.add('open');
+                if (name === 'support' && !ticketsLoaded) {
+                    ticketsLoaded = true;
+                    loadTickets();
+                }
+            }
+        }
+
+        // ---------------- Load profile ----------------
+        async function loadProfile() {
+            const res = await fetch('/api/profile', { credentials: 'same-origin' });
+            if (res.status === 401) { window.location.href = '/login'; return; }
+            profileData = await res.json();
+
+            document.getElementById('profileName').textContent = profileData.full_name;
+            document.getElementById('profileRole').textContent = profileData.role === 'super_admin' ? 'Super Admin' : (profileData.job_title || 'Therapist');
+            const pill = document.getElementById('profileStatusPill');
+            pill.textContent = profileData.status;
+            pill.className = `auth-status-pill ${profileData.status}`;
+
+            document.getElementById('fullName').value = profileData.full_name || '';
+            document.getElementById('jobTitle').value = profileData.job_title || '';
+            document.getElementById('email').value = profileData.email || '';
+            document.getElementById('countryCode').value = profileData.country_code || '';
+            document.getElementById('phoneNumber').value = profileData.phone_number || '';
+
+            if (profileData.hospital) {
+                document.getElementById('hospitalName').value = profileData.hospital.name || '';
+                document.getElementById('hospitalPhone').value = profileData.hospital.phone || '';
+                document.getElementById('hospitalAddress').value = profileData.hospital.address || '';
+            }
+
+            renderProfilePicWrap('profilePicWrap', 'picDeleteBtn', profileData.full_name, profileData.profile_picture_path);
+        }
+
+        wireProfilePictureControls({
+            wrapId: 'profilePicWrap',
+            uploadInputId: 'picUpload',
+            deleteBtnId: 'picDeleteBtn',
+            getFullName: () => (profileData && profileData.full_name) || '',
+            onUpdated: (newPath) => {
+                if (profileData) profileData.profile_picture_path = newPath;
+                // Keep the topbar avatar (and its quick-view popup) in sync
+                // immediately, without needing a page reload.
+                if (typeof __currentUser !== 'undefined' && __currentUser) {
+                    __currentUser.profile_picture_path = newPath;
+                    applyCurrentUserToTopbar(__currentUser);
+                }
+            },
+        });
+
+        function showAlert(elId, message, isSuccess) {
+            const box = document.getElementById(elId);
+            box.textContent = message;
+            box.className = `auth-alert ${isSuccess ? 'success' : 'error'}`;
+            box.style.display = 'block';
+            setTimeout(() => box.style.display = 'none', 4000);
+        }
+
+        // ---------------- Personal details edit ----------------
+        const PERSONAL_FIELD_IDS = ['fullName', 'jobTitle', 'countryCode', 'phoneNumber'];
+
+        function enterPersonalEdit() {
+            PERSONAL_FIELD_IDS.forEach(id => document.getElementById(id).disabled = false);
+            document.getElementById('editPersonalBtn').style.display = 'none';
+            document.getElementById('savePersonalBtn').style.display = '';
+            document.getElementById('cancelPersonalBtn').style.display = '';
+            document.getElementById('fullName').focus();
+        }
+
+        function exitPersonalEdit() {
+            PERSONAL_FIELD_IDS.forEach(id => document.getElementById(id).disabled = true);
+            document.getElementById('editPersonalBtn').style.display = '';
+            document.getElementById('savePersonalBtn').style.display = 'none';
+            document.getElementById('cancelPersonalBtn').style.display = 'none';
+        }
+
+        function cancelPersonalEdit() {
+            if (profileData) {
+                document.getElementById('fullName').value = profileData.full_name || '';
+                document.getElementById('jobTitle').value = profileData.job_title || '';
+                document.getElementById('countryCode').value = profileData.country_code || '';
+                document.getElementById('phoneNumber').value = profileData.phone_number || '';
+            }
+            exitPersonalEdit();
+        }
+
+        async function savePersonal() {
+            const payload = {
+                full_name: document.getElementById('fullName').value.trim(),
+                job_title: document.getElementById('jobTitle').value.trim(),
+                country_code: document.getElementById('countryCode').value.trim(),
+                phone_number: document.getElementById('phoneNumber').value.trim(),
+            };
+            const res = await fetch('/api/profile', {
+                method: 'PUT', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (res.ok) {
+                profileData = { ...profileData, ...payload };
+                const successBox = document.getElementById('personalSaveSuccess');
+                successBox.textContent = 'Personal details updated successfully.';
+                successBox.style.display = 'block';
+                setTimeout(() => successBox.style.display = 'none', 3000);
+                exitPersonalEdit();
+                loadCurrentUser();
+            } else {
+                alert('Could not save personal details.');
+            }
+        }
+
+        // ---------------- Hospital details edit ----------------
+        const HOSPITAL_FIELD_IDS = ['hospitalName', 'hospitalPhone', 'hospitalAddress'];
+
+        function enterHospitalEdit() {
+            HOSPITAL_FIELD_IDS.forEach(id => document.getElementById(id).disabled = false);
+            document.getElementById('editHospitalBtn').style.display = 'none';
+            document.getElementById('saveHospitalBtn').style.display = '';
+            document.getElementById('cancelHospitalBtn').style.display = '';
+            document.getElementById('hospitalName').focus();
+        }
+
+        function exitHospitalEdit() {
+            HOSPITAL_FIELD_IDS.forEach(id => document.getElementById(id).disabled = true);
+            document.getElementById('editHospitalBtn').style.display = '';
+            document.getElementById('saveHospitalBtn').style.display = 'none';
+            document.getElementById('cancelHospitalBtn').style.display = 'none';
+        }
+
+        function cancelHospitalEdit() {
+            if (profileData && profileData.hospital) {
+                document.getElementById('hospitalName').value = profileData.hospital.name || '';
+                document.getElementById('hospitalPhone').value = profileData.hospital.phone || '';
+                document.getElementById('hospitalAddress').value = profileData.hospital.address || '';
+            }
+            exitHospitalEdit();
+        }
+
+        async function saveHospital() {
+            const payload = {
+                hospital_name: document.getElementById('hospitalName').value.trim(),
+                hospital_phone: document.getElementById('hospitalPhone').value.trim(),
+                hospital_address: document.getElementById('hospitalAddress').value.trim(),
+            };
+            const res = await fetch('/api/profile', {
+                method: 'PUT', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                profileData = data;
+                const successBox = document.getElementById('hospitalSaveSuccess');
+                successBox.textContent = 'Hospital details updated successfully.';
+                successBox.style.display = 'block';
+                setTimeout(() => successBox.style.display = 'none', 3000);
+                exitHospitalEdit();
+            } else {
+                alert('Could not save hospital details.');
+            }
+        }
+
+        // ---------------- Account security ----------------
+        async function changeEmail() {
+            const new_email = document.getElementById('newEmail').value.trim();
+            const current_password = document.getElementById('emailChangePassword').value;
+            if (!new_email || !current_password) {
+                showAlert('emailChangeMsg', 'Enter the new email and your current password.', false);
+                return;
+            }
+            const res = await fetch('/api/profile/change-email', {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ new_email, current_password }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                document.getElementById('email').value = data.email;
+                document.getElementById('newEmail').value = '';
+                document.getElementById('emailChangePassword').value = '';
+                showAlert('emailChangeMsg', 'Email updated successfully.', true);
+                loadCurrentUser();
+            } else {
+                showAlert('emailChangeMsg', data.detail || 'Could not update email.', false);
+            }
+        }
+
+        async function changePassword() {
+            const current_password = document.getElementById('currentPassword').value;
+            const new_password = document.getElementById('newPassword').value;
+            const confirm_new_password = document.getElementById('confirmNewPassword').value;
+            if (!current_password || !new_password || !confirm_new_password) {
+                showAlert('passwordChangeMsg', 'Fill in all password fields.', false);
+                return;
+            }
+            if (new_password !== confirm_new_password) {
+                showAlert('passwordChangeMsg', 'New password and confirmation do not match.', false);
+                return;
+            }
+            if (new_password.length < 8) {
+                showAlert('passwordChangeMsg', 'New password must be at least 8 characters.', false);
+                return;
+            }
+            const res = await fetch('/api/profile/change-password', {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ current_password, new_password }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmNewPassword').value = '';
+                showAlert('passwordChangeMsg', 'Password updated successfully.', true);
+            } else {
+                showAlert('passwordChangeMsg', data.detail || 'Could not update password.', false);
+            }
+        }
+
+        // ---------------- Support ----------------
+        async function submitTicket() {
+            const subject = document.getElementById('ticketSubject').value.trim();
+            const message = document.getElementById('ticketMessage').value.trim();
+            if (subject.length < 3 || message.length < 5) {
+                showAlert('ticketMsg', 'Enter a subject (3+ chars) and a message (5+ chars).', false);
+                return;
+            }
+            const res = await fetch('/api/support', {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject, message }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                document.getElementById('ticketSubject').value = '';
+                document.getElementById('ticketMessage').value = '';
+                showAlert('ticketMsg', 'Ticket submitted. The super admin team will review it shortly.', true);
+                loadTickets();
+            } else {
+                showAlert('ticketMsg', data.detail || 'Could not submit ticket.', false);
+            }
+        }
+
+        function statusBadgeClass(status) {
+            if (status === 'resolved') return 'success';
+            if (status === 'in_progress') return 'info';
+            return 'warning';
+        }
+
+        function statusLabel(status) {
+            if (status === 'in_progress') return 'In progress';
+            if (status === 'resolved') return 'Resolved';
+            return 'Open';
+        }
+
+        async function loadTickets() {
+            const listEl = document.getElementById('ticketList');
+            const res = await fetch('/api/support', { credentials: 'same-origin' });
+            if (!res.ok) { listEl.innerHTML = '<div class="activity-empty">Could not load tickets.</div>'; return; }
+            const data = await res.json();
+            if (!data.items || data.items.length === 0) {
+                listEl.innerHTML = '<div class="activity-empty">No tickets raised yet.</div>';
+                return;
+            }
+            listEl.innerHTML = data.items.map(t => `
+                <div class="ticket-item">
+                    <div class="ticket-item-top">
+                        <div class="ticket-subject">${escapeHtml(t.subject)}</div>
+                        <span class="status-badge ${statusBadgeClass(t.status)}">${statusLabel(t.status)}</span>
+                    </div>
+                    <div class="ticket-meta">${new Date(t.created_at).toLocaleString()}</div>
+                    <div class="ticket-message">${escapeHtml(t.message)}</div>
+                    ${t.admin_response ? `<div class="ticket-response"><b>Admin response:</b> ${escapeHtml(t.admin_response)}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        loadProfile();
+    </script>
+</body>
+</html>

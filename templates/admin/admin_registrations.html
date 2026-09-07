@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrations — MedNova VR Rehab</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=8">
+    <link rel="stylesheet" href="/static/css/auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img class="logo-icon" src="/assets/logo.png?v=2" alt="MedNova logo" width="40" height="40">
+                    <div class="logo-text"><span class="logo-title">MedNova</span><span class="logo-subtitle">Super Admin</span></div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/admin/dashboard" class="nav-item"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+                <a href="/admin/registrations" class="nav-item active"><i class="fas fa-user-check"></i><span>Registrations</span></a>
+                <a href="/admin/customers" class="nav-item"><i class="fas fa-hospital-user"></i><span>Customers</span></a>
+                <a href="/admin/support" class="nav-item"><i class="fas fa-headset"></i><span>Support</span></a>
+                <a href="/admin/profile" class="nav-item"><i class="fas fa-user"></i><span>Profile</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+                    <div class="breadcrumb"><span>Admin</span><i class="fas fa-chevron-right"></i><span class="active">Registrations</span></div>
+                </div>
+                <div class="top-bar-right">
+                    <div class="topbar-avatar"><i class="fas fa-user-shield"></i></div>
+                    <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-area" style="display:flex;flex-direction:column;gap:20px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h1 class="page-title">Therapist Registrations</h1>
+                    <div style="display:flex;gap:8px;">
+                        <button class="filter-btn active" data-status="pending" onclick="setStatus('pending', this)">Pending</button>
+                        <button class="filter-btn" data-status="approved" onclick="setStatus('approved', this)">Approved</button>
+                        <button class="filter-btn" data-status="rejected" onclick="setStatus('rejected', this)">Rejected</button>
+                        <button class="filter-btn" data-status="all" onclick="setStatus('all', this)">All</button>
+                    </div>
+                </div>
+
+                <div class="card" style="background:var(--surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="text-align:left;border-bottom:1px solid var(--border);">
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Name</th>
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Email</th>
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Hospital</th>
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Job title</th>
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Status</th>
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Registered</th>
+                                <th style="padding:14px 16px;font-size:0.78rem;color:var(--text-muted);">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="regTableBody"></tbody>
+                    </table>
+                    <div id="regEmpty" style="display:none;padding:40px;text-align:center;color:var(--text-muted);">No registrations found.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+        let currentStatus = 'pending';
+
+        function setStatus(status, btnEl) {
+            currentStatus = status;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btnEl.classList.add('active');
+            loadRegistrations();
+        }
+
+        function statusPill(status) {
+            const map = { pending: 'pending', approved: 'approved', rejected: 'rejected' };
+            return `<span class="auth-status-pill ${map[status] || 'pending'}">${status}</span>`;
+        }
+
+        async function loadRegistrations() {
+            try {
+                const res = await fetch(`/api/admin/registrations?status=${currentStatus}&page_size=100`, { credentials: 'same-origin' });
+                if (res.status === 401 || res.status === 403) { window.location.href = '/login'; return; }
+                const data = await res.json();
+                const body = document.getElementById('regTableBody');
+                const empty = document.getElementById('regEmpty');
+
+                if (!data.items.length) {
+                    body.innerHTML = ''; empty.style.display = 'block'; return;
+                }
+                empty.style.display = 'none';
+
+                body.innerHTML = data.items.map(u => `
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <td style="padding:12px 16px;font-weight:600;">${escapeHtml(u.full_name)}</td>
+                        <td style="padding:12px 16px;">${escapeHtml(u.email)}</td>
+                        <td style="padding:12px 16px;">${u.hospital_name ? escapeHtml(u.hospital_name) : '—'}</td>
+                        <td style="padding:12px 16px;">${u.job_title ? escapeHtml(u.job_title) : '—'}</td>
+                        <td style="padding:12px 16px;">${statusPill(u.status)}</td>
+                        <td style="padding:12px 16px;" class="caption">${new Date(u.created_at).toLocaleDateString()}</td>
+                        <td style="padding:12px 16px;">
+                            ${u.status === 'pending' ? `
+                                <button class="btn-icon" title="Approve" onclick="approveUser('${u.id}')" style="color:var(--success);"><i class="fas fa-check"></i></button>
+                                <button class="btn-icon" title="Reject" onclick="rejectUser('${u.id}')" style="color:var(--danger);"><i class="fas fa-times"></i></button>
+                            ` : '—'}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function approveUser(id) {
+            if (!confirm('Approve this registration? They will be able to log in immediately.')) return;
+            await fetch(`/api/admin/registrations/${id}/approve`, { method: 'POST', credentials: 'same-origin' });
+            loadRegistrations();
+        }
+
+        async function rejectUser(id) {
+            const reason = prompt('Reason for rejection (optional):') || null;
+            await fetch(`/api/admin/registrations/${id}/reject`, {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason }),
+            });
+            loadRegistrations();
+        }
+
+        loadRegistrations();
+    </script>
+</body>
+</html>

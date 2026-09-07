@@ -1,0 +1,110 @@
+vr1/
+├── .dockerignore
+├── .gitignore
+├── Dockerfile
+├── README.md
+├── alembic.ini
+├── app.py
+├── assets/
+│   ├── 01_VR_Therapy_Session.png
+│   ├── 02_Progress_Dashboard.png
+│   ├── 03_Therapy_Session.png
+│   ├── 04_Session_Report_crop.png
+│   ├── 05_Therapy.png
+│   └── logo.png
+├── auth/
+│   ├── dependencies.py
+│   ├── email_validation.py
+│   ├── forgot_password.py
+│   ├── login.py
+│   ├── rate_limit.py
+│   ├── register.py
+│   ├── reset_password.py
+│   ├── schemas.py
+│   ├── security.py
+│   └── verify_email.py
+├── cleanup_orphan_patients.py
+├── config.py
+├── create_super_admin.py
+├── data/
+│   └── reports/
+│       └── .gitkeep
+├── database.py
+├── docker-compose.yml
+├── env.example
+├── mail/
+│   ├── __init__.py
+│   ├── mailer.py
+│   └── templates.py
+├── migrations/
+│   ├── README
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions/
+│       ├── a1e9f2c7d4b6_add_email_verification.py
+│       ├── b3f7a1d9c2e4_add_game_metrics_columns.py
+│       └── cf2ce73436ff_add_report_range_columns.py
+├── models.py
+├── reports/
+│   └── .gitkeep
+├── requirements.txt
+├── routers/
+│   ├── __init__.py
+│   ├── account/
+│   │   ├── __init__.py
+│   │   ├── admin.py
+│   │   ├── profile.py
+│   │   └── support.py
+│   ├── clinical/
+│   │   ├── __init__.py
+│   │   ├── analytics.py
+│   │   ├── dashboard.py
+│   │   ├── export.py
+│   │   ├── patients.py
+│   │   ├── reports.py
+│   │   └── sessions.py
+│   ├── pages.py
+│   └── ws.py
+├── services/
+│   ├── __init__.py
+│   ├── game_metrics.py
+│   ├── helpers.py
+│   ├── report_builder.py
+│   └── vr_ws_manager.py
+├── static/
+│   ├── css/
+│   │   ├── auth-pages.css
+│   │   ├── auth.css
+│   │   ├── landing.css
+│   │   └── style.css
+│   ├── js/
+│   │   ├── app.js
+│   │   ├── auth.js
+│   │   ├── chart-theme.js
+│   │   └── profile-picture.js
+│   └── vendor/
+│       └── chart.umd.min.js
+├── structure.txt
+├── templates/
+│   ├── admin/
+│   │   ├── admin_customers.html
+│   │   ├── admin_dashboard.html
+│   │   ├── admin_profile.html
+│   │   ├── admin_registrations.html
+│   │   └── admin_support.html
+│   ├── app/
+│   │   ├── analytics.html
+│   │   ├── dashboard.html
+│   │   ├── patients.html
+│   │   ├── reports.html
+│   │   ├── session.html
+│   │   └── settings.html
+│   └── auth/
+│       ├── forgot_password.html
+│       ├── index.html
+│       ├── login.html
+│       ├── register.html
+│       └── reset_password.html
+└── uploads/
+    └── profile_pictures/
+        └── .gitkeep

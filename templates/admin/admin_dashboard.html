@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard — MedNova VR Rehab</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=8">
+    <link rel="stylesheet" href="/static/css/auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="/static/vendor/chart.umd.min.js"></script>
+    <script src="/static/js/chart-theme.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img class="logo-icon" src="/assets/logo.png?v=2" alt="MedNova logo" width="40" height="40">
+                    <div class="logo-text">
+                        <span class="logo-title">MedNova</span>
+                        <span class="logo-subtitle">Super Admin</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/admin/dashboard" class="nav-item active"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+                <a href="/admin/registrations" class="nav-item"><i class="fas fa-user-check"></i><span>Registrations</span></a>
+                <a href="/admin/customers" class="nav-item"><i class="fas fa-hospital-user"></i><span>Customers</span></a>
+                <a href="/admin/support" class="nav-item"><i class="fas fa-headset"></i><span>Support</span></a>
+                <a href="/admin/profile" class="nav-item"><i class="fas fa-user"></i><span>Profile</span></a>
+            </nav>
+            <div class="sidebar-footer">
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+                    <div class="breadcrumb"><span>Admin</span><i class="fas fa-chevron-right"></i><span class="active">Dashboard</span></div>
+                </div>
+                <div class="top-bar-right">
+                    <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-area" style="display:flex;flex-direction:column;gap:24px;">
+                <h1 class="page-title">Product Growth Overview</h1>
+
+                <div class="stats-grid" id="statsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+                    <!-- filled by JS -->
+                </div>
+
+                <div class="card" style="background:var(--surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:24px;">
+                    <div class="card-title" style="margin-bottom:16px;">Therapist Registration Trend (30 days)</div>
+                    <canvas id="regTrendChart" height="90"></canvas>
+                </div>
+
+                <div class="card" style="background:var(--surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:24px;">
+                    <div class="card-title" style="margin-bottom:16px;">Hospital Growth (90 days)</div>
+                    <canvas id="hospitalTrendChart" height="90"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+        function statCard(label, value, icon, color) {
+            return `<div class="card" style="background:var(--surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:20px;display:flex;align-items:center;gap:14px;">
+                <div style="width:46px;height:46px;border-radius:12px;background:${color}22;color:${color};display:flex;align-items:center;justify-content:center;font-size:1.15rem;"><i class="fas ${icon}"></i></div>
+                <div><div style="font-size:1.4rem;font-weight:800;">${value}</div><div class="caption">${label}</div></div>
+            </div>`;
+        }
+
+        async function loadOverview() {
+            try {
+                const res = await fetch('/api/admin/dashboard/overview', { credentials: 'same-origin' });
+                if (res.status === 401 || res.status === 403) { window.location.href = '/login'; return; }
+                const o = await res.json();
+                document.getElementById('statsGrid').innerHTML = [
+                    statCard('Total Hospitals', o.total_hospitals, 'fa-hospital', '#1B84FF'),
+                    statCard('Approved Therapists', o.total_therapists, 'fa-user-md', '#48BB78'),
+                    statCard('Pending Approvals', o.pending_approvals, 'fa-hourglass-half', '#ED8936'),
+                    statCard('Open Complaints', o.open_complaints, 'fa-headset', '#F56565'),
+                    statCard('Total Patients', o.total_patients, 'fa-child', '#9F7AEA'),
+                    statCard('Total Sessions', o.total_sessions, 'fa-vr-cardboard', '#1B84FF'),
+                ].join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadTrend(url, canvasId, label, color) {
+            try {
+                const res = await fetch(url, { credentials: 'same-origin' });
+                const rows = await res.json();
+                new Chart(document.getElementById(canvasId), {
+                    type: 'line',
+                    data: {
+                        labels: rows.map(r => r.date),
+                        datasets: [{ label, data: rows.map(r => r.count), borderColor: color, backgroundColor: color + '22', fill: true, tension: 0.35 }],
+                    },
+                    options: { responsive: true, plugins: { legend: { display: false } } },
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        loadOverview();
+        loadTrend('/api/admin/dashboard/registration-trend?days=30', 'regTrendChart', 'New Therapists', '#1B84FF');
+        loadTrend('/api/admin/dashboard/hospital-growth?days=90', 'hospitalTrendChart', 'New Hospitals', '#48BB78');
+    </script>
+</body>
+</html>
