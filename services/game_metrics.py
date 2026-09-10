@@ -27,6 +27,17 @@ VIRTUAL_STORE_FIELDS = {
     "total_tasks":              ("TotalTasks",             "Total Tasks",              "int"),
 }
 
+# db_keys listed here are still captured from the VR payload and written
+# to session.game_metrics by extract_game_metrics() (so the data exists
+# and is queryable), but are excluded from anything user-facing: the PDF
+# report grid (report_builder._game_metrics_grid, via get_fields_for) and
+# the frontend metrics schema (registry_as_json, used by session.html /
+# analytics.html to render live + summary metric cards). Add a db_key
+# here to hide it end-to-end without deleting the underlying data.
+HIDDEN_METRICS = {
+    "movement_accuracy",
+}
+
 # game_type -> {"display_name": ..., "keywords": (...), "fields": {...}}
 # display_name is the name a therapist actually picks on the session page
 # (session.html's game <select>) and sees everywhere else (session lists,
@@ -74,6 +85,10 @@ def extract_game_metrics(game_type: str | None, raw_payload: dict) -> dict | Non
     game's fields into a plain {db_key: value} dict ready to store in
     SessionModel.game_metrics. Returns None if game_type is unknown or
     none of its fields were present in the payload.
+
+    Deliberately uses the FULL field map (including HIDDEN_METRICS) so
+    hidden metrics are still captured and stored — only the display paths
+    (get_fields_for, registry_as_json) filter them out.
     """
     entry = GAME_METRIC_REGISTRY.get(game_type)
     if not entry:
@@ -88,11 +103,24 @@ def extract_game_metrics(game_type: str | None, raw_payload: dict) -> dict | Non
     return result or None
 
 
-def get_fields_for(game_type: str | None):
+def get_fields_for(game_type: str | None, include_hidden: bool = False):
     """Returns the field map (db_key -> (vr_field, label, format)) for a
-    game_type, or None if unknown / no game-specific metric group."""
+    game_type, or None if unknown / no game-specific metric group.
+
+    By default excludes HIDDEN_METRICS so callers like
+    report_builder._game_metrics_grid never render them. Pass
+    include_hidden=True only for internal/debug tooling that
+    intentionally needs the full map."""
     entry = GAME_METRIC_REGISTRY.get(game_type)
-    return entry["fields"] if entry else None
+    if not entry:
+        return None
+    if include_hidden:
+        return entry["fields"]
+    return {
+        db_key: value
+        for db_key, value in entry["fields"].items()
+        if db_key not in HIDDEN_METRICS
+    }
 
 
 def registry_as_json() -> dict:
@@ -101,7 +129,10 @@ def registry_as_json() -> dict:
     game-metrics-schema so it can render whichever game's live/historical
     metrics generically — adding a new game only ever means an entry
     here, never a frontend code change. display_name is the label to
-    show a user; game_type is only an internal key."""
+    show a user; game_type is only an internal key.
+
+    HIDDEN_METRICS are omitted here too, so a generic/schema-driven
+    frontend renderer never learns about them either."""
     return {
         game_type: {
             "display_name": entry.get("display_name", game_type),
@@ -109,6 +140,7 @@ def registry_as_json() -> dict:
             "fields": [
                 {"key": db_key, "vr_field": vr_field, "label": label, "format": fmt}
                 for db_key, (vr_field, label, fmt) in entry["fields"].items()
+                if db_key not in HIDDEN_METRICS
             ],
         }
         for game_type, entry in GAME_METRIC_REGISTRY.items()

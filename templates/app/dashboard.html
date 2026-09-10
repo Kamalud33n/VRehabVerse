@@ -261,19 +261,21 @@
             // First entry is featured as the gradient "hero" card — Completion
             // Rate is the single number a therapist glances at first, so it
             // gets the visual spotlight instead of sitting flat in the grid.
+            // "Pending Sessions" and "Avg Reaction Time (30d)" cards were
+            // dropped from this grid on request - the overview API call
+            // above still fetches o.upcoming_sessions / o.avg_reaction_time_ms
+            // (other stats in this array need the same response), those two
+            // fields are just no longer rendered as their own stat cards.
             const stats = [
                 { icon: 'fa-check-circle', label: 'Completion Rate · last 30 days', value: o.completion_rate + '%', hero: true },
                 { icon: 'fa-calendar-check', label: "Today's Sessions", value: o.todays_sessions, cls: 'blue' },
                 { icon: 'fa-vr-cardboard',   label: 'Connected VR Devices', value: o.connected_vr_devices, cls: 'purple' },
                 { icon: 'fa-user-injured',   label: 'Connected Patients', value: o.connected_patients, cls: 'green' },
-                { icon: 'fa-hourglass-half', label: 'Pending Sessions', value: o.upcoming_sessions, cls: 'orange' },
                 { icon: 'fa-file-alt',       label: 'Reports Generated', value: o.reports_generated, cls: 'blue' },
                 { icon: 'fa-users',          label: 'Total Patients', value: o.total_patients, cls: 'purple' },
                 { icon: 'fa-clock',          label: 'Avg Session Length', value: `${mins}m ${secs}s`, cls: 'orange' },
                 { icon: 'fa-triangle-exclamation', label: 'Avg Errors/Session (30d)',
                   value: o.avg_error_count !== null ? o.avg_error_count : '-', cls: 'orange' },
-                { icon: 'fa-stopwatch',      label: 'Avg Reaction Time (30d)',
-                  value: o.avg_reaction_time_ms !== null ? `${o.avg_reaction_time_ms}ms` : '-', cls: 'blue' },
             ];
 
             document.getElementById('dashboardStats').innerHTML = stats.map(s => s.hero ? `

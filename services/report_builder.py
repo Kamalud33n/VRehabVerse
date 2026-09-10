@@ -62,6 +62,15 @@ def _band(value, good=80, ok=60):
     return "poor"
 
 
+# end_reason on a completed session: "manual" (therapist pressed End
+# Session), "emergency" (Emergency Stop), or None (the VR app's own
+# session_end summary arrived on its own — a natural, unassisted end).
+END_REASON_LABELS = {
+    "manual": "Ended by Therapist",
+    "emergency": "Emergency Stop",
+}
+
+
 # ------------------------------------------------------------------
 # Charts
 # ------------------------------------------------------------------
@@ -597,12 +606,19 @@ def build_report_sync(patient: Patient, session: SessionModel, output_path: str,
 
     # ---------------- Patient / Session / Score row ----------------
     patient_info = _info_table(_patient_info_rows(patient))
-    session_info = _info_table([
+    session_info_rows = [
         ("Exercise", session.exercise_name),
         ("Status", session.status.title()),
         ("Total reps", str(session.total_reps or 0)),
         ("Duration", f"{(session.duration_seconds or 0) // 60}m {(session.duration_seconds or 0) % 60}s"),
-    ])
+    ]
+    # Only shown for sessions ended from the dashboard (End Session /
+    # Emergency Stop) - a session that finished naturally via the VR
+    # app's own session_end summary has end_reason left NULL, so this
+    # row is omitted for those rather than showing a misleading "-".
+    if session.end_reason:
+        session_info_rows.append(("End Reason", END_REASON_LABELS.get(session.end_reason, session.end_reason.title())))
+    session_info = _info_table(session_info_rows)
 
     # acc == this session's own Level 2 completion % (set from the VR
     # summary's completion_percentage, never from another session and

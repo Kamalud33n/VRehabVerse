@@ -325,10 +325,9 @@
                             <span class="stat-value" id="GmMovementSpeedValue">-</span>
                             <span class="stat-label">Movement Speed</span>
                         </div>
-                        <div class="stat-card big-stat" data-metric="gm_movement_accuracy">
-                            <span class="stat-value" id="GmMovementAccuracyValue">-</span>
-                            <span class="stat-label">Movement Accuracy</span>
-                        </div>
+                        <!-- gm_movement_accuracy intentionally not rendered here.
+                             Value is still stored in session.game_metrics and
+                             returned by the API, just not shown in this UI. -->
                         <div class="stat-card big-stat" data-metric="gm_successful_movements">
                             <span class="stat-value" id="GmSuccessfulMovementsValue">-</span>
                             <span class="stat-label">Successful Movements</span>
@@ -452,10 +451,9 @@
                                 <span class="stat-value" id="popupGmMovementSpeedValue">-</span>
                                 <span class="stat-label">Movement Speed</span>
                             </div>
-                            <div class="stat-card big-stat" data-metric="gm_movement_accuracy">
-                                <span class="stat-value" id="popupGmMovementAccuracyValue">-</span>
-                                <span class="stat-label">Movement Accuracy</span>
-                            </div>
+                            <!-- gm_movement_accuracy intentionally not rendered here.
+                                 Value is still stored in session.game_metrics and
+                                 returned by the API, just not shown in this popup. -->
                             <div class="stat-card big-stat" data-metric="gm_successful_movements">
                                 <span class="stat-value" id="popupGmSuccessfulMovementsValue">-</span>
                                 <span class="stat-label">Successful Movements</span>
@@ -565,7 +563,7 @@
             case 'gm_total_arm_reach_distance':
             case 'gm_total_movement_duration':
             case 'gm_average_movement_speed':
-            case 'gm_movement_accuracy':
+            // gm_movement_accuracy deliberately not wired here - card removed from UI.
             case 'gm_successful_movements':
             case 'gm_repetition_count':
             case 'gm_max_movement_range':
@@ -610,7 +608,7 @@
         total_arm_reach_distance: (v) => v.toFixed(2) + 'm',
         total_movement_duration:  (v) => v.toFixed(2) + 's',
         average_movement_speed:   (v) => v.toFixed(2) + ' m/s',
-        movement_accuracy:        (v) => v.toFixed(0) + '%',
+        // movement_accuracy formatter removed - metric no longer rendered in UI.
         successful_movements:     (v) => String(v),
         repetition_count:         (v) => String(v),
         max_movement_range:       (v) => v.toFixed(2) + 'm',
@@ -619,7 +617,7 @@
         total_arm_reach_distance: 'GmArmReachValue',
         total_movement_duration:  'GmMovementDurationValue',
         average_movement_speed:   'GmMovementSpeedValue',
-        movement_accuracy:        'GmMovementAccuracyValue',
+        // movement_accuracy element id removed - metric no longer rendered in UI.
         successful_movements:     'GmSuccessfulMovementsValue',
         repetition_count:         'GmRepetitionCountValue',
         max_movement_range:       'GmRomValue',
@@ -1110,9 +1108,11 @@
     // Shared "actually end the session" logic — no confirmation here,
     // both endSession() and emergencyStop() show their own modal first
     // and only call this once the user has confirmed.
-    async function _finishSession() {
+    // reason: 'manual' (End Session) or 'emergency' (Emergency Stop) -
+    // tagged on the session (end_reason) and in the audit log server-side.
+    async function _finishSession(reason) {
         try {
-            await fetch(`/api/sessions/${_sessionId}/end`, {method: 'POST'});
+            await fetch(`/api/sessions/${_sessionId}/end?reason=${reason}`, {method: 'POST'});
             document.getElementById('sessionStatusBadge').textContent = 'completed';
             document.getElementById('sessionStatusBadge').className = 'status-badge success';
             stopTimer();
@@ -1131,7 +1131,7 @@
         });
         if (!ok) return;
 
-        await _finishSession();
+        await _finishSession('manual');
     }
 
     async function emergencyStop() {
@@ -1144,7 +1144,7 @@
         });
         if (!ok) return;
 
-        await _finishSession();
+        await _finishSession('emergency');
         alert('Session stopped.');
     }
 

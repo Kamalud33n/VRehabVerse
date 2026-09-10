@@ -385,6 +385,7 @@ async def ws_vr(websocket: WebSocket):
                 "session_id": session.id,
                 "score": summary.score,
                 "completion_percentage": summary.completion_percentage,
+                "reason": session.end_reason,
             })
 
         # Bug fix: this was previously only cleaned up in the

@@ -283,6 +283,13 @@ class SessionModel(Base, TimestampMixin, SoftDeleteMixin):
 
     status           = Column(String(20), default="pending", nullable=False, index=True)
 
+    # How this session reached "completed", when ended via the dashboard:
+    #   "manual"    - therapist/doctor pressed "End Session"
+    #   "emergency" - therapist/doctor pressed "Emergency Stop"
+    # Left NULL for sessions that end the normal way (VR app's own
+    # session_end summary in routers/ws.py never sets this).
+    end_reason       = Column(String(20), nullable=True)
+
     start_time       = Column(DateTime, nullable=True)
     end_time         = Column(DateTime, nullable=True)
     duration_seconds = Column(Integer, nullable=True)

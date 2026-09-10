@@ -32,6 +32,7 @@ class SessionOut(BaseModel):
     supervising_user_id: str | None = None
     exercise_name: str
     status: str
+    end_reason: str | None = None
     start_time: datetime.datetime | None
     end_time: datetime.datetime | None
     duration_seconds: int | None
@@ -265,15 +266,67 @@ async def start_training(session_id: str, current_user: User = Depends(get_curre
     return {"status": "training_started"}
 
 
+SESSION_END_REASONS = {"manual", "emergency"}
+
+
 @router.post("/{session_id}/end")
-def end_session(session_id: str, current_user: User = Depends(get_current_user)):
+async def end_session(
+    session_id: str,
+    reason: str = Query("manual", description="'manual' (End Session) or 'emergency' (Emergency Stop)"),
+    current_user: User = Depends(get_current_user),
+):
+    if reason not in SESSION_END_REASONS:
+        raise HTTPException(422, f"reason must be one of {sorted(SESSION_END_REASONS)}")
+
+    # Verify ownership and record why the dashboard requested the stop.
+    # Do NOT mark the session completed yet when VR is connected: Unity must
+    # receive the command, stop the game, calculate the current metrics, and
+    # send its session_end payload first.
     with get_db() as db:
         session = _get_owned_session(db, session_id, current_user)
+        session.end_reason = reason
 
+        db.add(AuditLog(
+            entity_type="Session",
+            entity_id=session.id,
+            action="session_ended_emergency" if reason == "emergency" else "session_ended_manual",
+            performed_by=current_user.id,
+            details={"reason": reason},
+        ))
+        db.commit()
+
+    # Stop the connected headset now. Unity will send the current
+    # GameSessionData as the durable session_end payload.
+    sent = await vr_manager.send_to_session(
+        session_id,
+        {"command": "end_session" if reason == "manual" else "emergency_stop"},
+    )
+
+    if sent:
+        # ws.py changes the status to completed only after the VR summary is
+        # received and saved.
+        return {"status": "ending", "end_reason": reason}
+
+    # No responsive VR connection means there is no current VR summary to
+    # save. Complete the dashboard-side session as a fallback.
+    with get_db() as db:
+        session = _get_owned_session(db, session_id, current_user)
         session.status = "completed"
         session.end_time = datetime.datetime.utcnow()
+        session.end_reason = reason
         db.commit()
-        return {"status": "completed"}
+
+    await dashboard_manager.broadcast_global({
+        "type": "session_ended",
+        "session_id": session_id,
+        "reason": reason,
+    })
+
+    return {
+        "status": "completed",
+        "end_reason": reason,
+        "vr_connected": False,
+    }
 
 
 class SessionTestData(BaseModel):

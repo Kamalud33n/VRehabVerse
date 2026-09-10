@@ -4,6 +4,7 @@ import datetime
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -24,6 +25,31 @@ from auth import verify_email as auth_verify_email
 init_db()
 
 app = FastAPI(title="MedNova VR Rehabilitation Platform", version="1.0.0")
+
+
+class NoCacheHTMLMiddleware(BaseHTTPMiddleware):
+    """
+    HTML responses (session.html, dashboard pages, etc. - served via
+    routers/pages.py or any other route) get Cache-Control: no-cache,
+    must-revalidate. This makes the browser re-validate with the server
+    on every load instead of silently reusing a stale cached copy, which
+    was causing the "session connection looks cached, hard refresh fixes
+    it" issue locally - and would do the same (often worse, behind a CDN/
+    reverse proxy with longer default caching) in production if left as
+    is. Static assets under /static, /uploads, /assets are untouched
+    here since they're served by StaticFiles, not affected by this check
+    (content-type for those isn't text/html), and can use normal/longer
+    caching safely.
+    """
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        content_type = response.headers.get("content-type", "")
+        if "text/html" in content_type:
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return response
+
+
+app.add_middleware(NoCacheHTMLMiddleware)
 
 # Powers the @limiter.limit(...) decorators on the login/OTP/password-reset
 # routes (see auth/rate_limit.py for why these specific endpoints and why
