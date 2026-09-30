@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Session - MedNova VR Rehab</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=9">
+    <link rel="stylesheet" href="/static/css/style.css?v={{ static_v('css/style.css') }}">
     <link rel="stylesheet" href="/static/css/auth.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -59,6 +59,23 @@
             animation: povPulse 1.4s ease-in-out infinite;
         }
         @keyframes povPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+        .task-card {
+            width: 100%; max-width: 640px; margin: -8px auto 0;
+            display: flex; justify-content: space-between; align-items: center; gap: 16px;
+            padding: 10px 16px; border-radius: 12px;
+            border: 1.5px solid var(--primary);
+            background: var(--primary-tint, rgba(10,132,255,0.08));
+            transition: opacity 0.2s, border-color 0.2s, background 0.2s;
+        }
+        .task-card.idle {
+            border-color: transparent;
+            background: rgba(128,128,128,0.10);
+            opacity: 0.75;
+        }
+        .task-card-side { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .task-card-side-ar { margin-left: auto; }
+        .task-card-label { font-size: 11px; font-weight: 600; opacity: 0.65; }
+        .task-card-text { font-size: 17px; font-weight: 700; overflow-wrap: anywhere; }
         .live-metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; width: 100%; }
         @media (max-width: 700px) { .live-metrics-grid { grid-template-columns: repeat(2, 1fr); } }
         .live-metrics-grid .stat-card { padding: 16px; }
@@ -70,7 +87,7 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo-container">
-                    <img class="logo-icon" src="/assets/logo.png?v=2" alt="MedNova logo" width="40" height="40">
+                    <img class="logo-icon" src="/assets/logo.png?v={{ asset_v('logo.png') }}" alt="MedNova logo" width="40" height="40">
                     <div class="logo-text">
                         <span class="logo-title">MedNova</span>
                         <span class="logo-subtitle">VR Rehab Platform</span>
@@ -218,6 +235,16 @@
                                 <img id="vrPovImage" alt="VR headset live view">
                                 <div class="pov-placeholder" id="povPlaceholder">Waiting for headset feed...</div>
                             </div>
+                            <div class="task-card idle" id="taskCard">
+                                <div class="task-card-side">
+                                    <span class="task-card-label">Current task</span>
+                                    <span class="task-card-text" id="taskCardEn">Waiting for next task</span>
+                                </div>
+                                <div class="task-card-side task-card-side-ar" dir="rtl" lang="ar">
+                                    <span class="task-card-label">المهمة الحالية</span>
+                                    <span class="task-card-text" id="taskCardAr">في انتظار المهمة التالية</span>
+                                </div>
+                            </div>
                             <div class="live-metrics-grid">
                                 <div class="stat-card" data-metric="score"><span class="stat-value" id="liveScoreValue">-</span><span class="stat-label">Score</span></div>
                                 <div class="stat-card" data-metric="completion"><span class="stat-value" id="liveCompletionValue">-</span><span class="stat-label">Completion</span></div>
@@ -325,9 +352,10 @@
                             <span class="stat-value" id="GmMovementSpeedValue">-</span>
                             <span class="stat-label">Movement Speed</span>
                         </div>
-                        <!-- gm_movement_accuracy intentionally not rendered here.
-                             Value is still stored in session.game_metrics and
-                             returned by the API, just not shown in this UI. -->
+                        <div class="stat-card big-stat" data-metric="gm_movement_accuracy">
+                            <span class="stat-value" id="GmMovementAccuracyValue">-</span>
+                            <span class="stat-label">Movement Accuracy</span>
+                        </div>
                         <div class="stat-card big-stat" data-metric="gm_successful_movements">
                             <span class="stat-value" id="GmSuccessfulMovementsValue">-</span>
                             <span class="stat-label">Successful Movements</span>
@@ -451,9 +479,10 @@
                                 <span class="stat-value" id="popupGmMovementSpeedValue">-</span>
                                 <span class="stat-label">Movement Speed</span>
                             </div>
-                            <!-- gm_movement_accuracy intentionally not rendered here.
-                                 Value is still stored in session.game_metrics and
-                                 returned by the API, just not shown in this popup. -->
+                            <div class="stat-card big-stat" data-metric="gm_movement_accuracy">
+                                <span class="stat-value" id="popupGmMovementAccuracyValue">-</span>
+                                <span class="stat-label">Movement Accuracy</span>
+                            </div>
                             <div class="stat-card big-stat" data-metric="gm_successful_movements">
                                 <span class="stat-value" id="popupGmSuccessfulMovementsValue">-</span>
                                 <span class="stat-label">Successful Movements</span>
@@ -516,6 +545,39 @@
     // the page goes back to its pre-session state (resetToSetupPanel) so a
     // fresh session doesn't inherit the previous patient's level name.
     let _lastLevelName = null;
+    let _lastTaskRequest = null;
+
+    const TASK_LABELS = {
+        water: { en: 'Water', ar: 'ماء' },
+        food:  { en: 'Food', ar: 'طعام' },
+        clean: { en: 'Clean the shell', ar: 'تنظيف الصدفة' },
+    };
+    const TASK_IDLE = { en: 'Waiting for next task', ar: 'في انتظار المهمة التالية' };
+
+    function updateTaskCard(request) {
+        const card = document.getElementById('taskCard');
+        const enEl = document.getElementById('taskCardEn');
+        const arEl = document.getElementById('taskCardAr');
+        if (!card || !enEl || !arEl) return;
+
+        const text = (request || '').trim();
+        let label;
+        if (!text) {
+            label = TASK_IDLE;
+        } else if (TASK_LABELS[text.toLowerCase()]) {
+            label = TASK_LABELS[text.toLowerCase()];
+        } else if (/[\u0600-\u06FF]/.test(text)) {
+            label = { en: '', ar: text };
+        } else {
+            label = { en: text, ar: '' };
+        }
+
+        enEl.textContent = label.en;
+        arEl.textContent = label.ar;
+        enEl.parentElement.style.display = label.en ? '' : 'none';
+        arEl.parentElement.style.display = label.ar ? '' : 'none';
+        card.classList.toggle('idle', !text);
+    }
 
     // ------------------------------------------------------------
     // Per-game metric visibility. Each game only reports a subset of
@@ -563,7 +625,7 @@
             case 'gm_total_arm_reach_distance':
             case 'gm_total_movement_duration':
             case 'gm_average_movement_speed':
-            // gm_movement_accuracy deliberately not wired here - card removed from UI.
+            case 'gm_movement_accuracy':
             case 'gm_successful_movements':
             case 'gm_repetition_count':
             case 'gm_max_movement_range':
@@ -608,7 +670,7 @@
         total_arm_reach_distance: (v) => v.toFixed(2) + 'm',
         total_movement_duration:  (v) => v.toFixed(2) + 's',
         average_movement_speed:   (v) => v.toFixed(2) + ' m/s',
-        // movement_accuracy formatter removed - metric no longer rendered in UI.
+        movement_accuracy:        (v) => v.toFixed(0) + '%',
         successful_movements:     (v) => String(v),
         repetition_count:         (v) => String(v),
         max_movement_range:       (v) => v.toFixed(2) + 'm',
@@ -617,7 +679,7 @@
         total_arm_reach_distance: 'GmArmReachValue',
         total_movement_duration:  'GmMovementDurationValue',
         average_movement_speed:   'GmMovementSpeedValue',
-        // movement_accuracy element id removed - metric no longer rendered in UI.
+        movement_accuracy:        'GmMovementAccuracyValue',
         successful_movements:     'GmSuccessfulMovementsValue',
         repetition_count:         'GmRepetitionCountValue',
         max_movement_range:       'GmRomValue',
@@ -775,6 +837,12 @@
             document.getElementById('sessionStatusBadge').textContent = 'live — ' + msg.LevelName;
         }
 
+        const request = (msg.CurrentRequest || '').trim();
+        if (request !== _lastTaskRequest) {
+            _lastTaskRequest = request;
+            updateTaskCard(request);
+        }
+
         const setText = (id, value) => {
             const el = document.getElementById(id);
             if (el) el.textContent = value;
@@ -920,6 +988,8 @@
         stopTimer();
         document.getElementById('sessionTimer').textContent = '00:00';
         _lastLevelName = null;
+        _lastTaskRequest = null;
+        updateTaskCard('');
 
         document.getElementById('s_patient').value = '';
         document.getElementById('s_exercise').value = '';
@@ -1108,11 +1178,9 @@
     // Shared "actually end the session" logic — no confirmation here,
     // both endSession() and emergencyStop() show their own modal first
     // and only call this once the user has confirmed.
-    // reason: 'manual' (End Session) or 'emergency' (Emergency Stop) -
-    // tagged on the session (end_reason) and in the audit log server-side.
-    async function _finishSession(reason) {
+    async function _finishSession() {
         try {
-            await fetch(`/api/sessions/${_sessionId}/end?reason=${reason}`, {method: 'POST'});
+            await fetch(`/api/sessions/${_sessionId}/end`, {method: 'POST'});
             document.getElementById('sessionStatusBadge').textContent = 'completed';
             document.getElementById('sessionStatusBadge').className = 'status-badge success';
             stopTimer();
@@ -1131,7 +1199,7 @@
         });
         if (!ok) return;
 
-        await _finishSession('manual');
+        await _finishSession();
     }
 
     async function emergencyStop() {
@@ -1144,7 +1212,7 @@
         });
         if (!ok) return;
 
-        await _finishSession('emergency');
+        await _finishSession();
         alert('Session stopped.');
     }
 
